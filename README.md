@@ -1,13 +1,14 @@
 # digit-to-words-nepali
 
-A TypeScript library to convert numbers into their word representations in English and Nepali languages.
+A TypeScript library to convert numbers into their word representations in English and Nepali languages. Supports numbers up to Adanta Singhar (10^39) with extensive currency and decimal formatting options.
 
 ## Features
 
 - Convert numbers to words in English and Nepali languages
-- Support for numbers up to 1e39 (Adanta Singhar)
-- Currency formatting with custom currency names
-- Decimal number handling with configurable decimal suffixes
+- Support for numbers up to 10^39 (Adanta Singhar)
+- Currency formatting with custom currency names and decimal suffixes
+- Decimal number handling with configurable decimal formats
+- Language-specific defaults for currency and decimal formatting
 - Zero-dependency and lightweight
 - Fully tested with comprehensive test cases
 
@@ -24,7 +25,7 @@ npm install digit-to-words-nepali
 ```typescript
 import { digitToNepaliWords, digitToEnglishWords } from "digit-to-words-nepali";
 
-// Basic number conversion
+// Basic number conversion (Nepali)
 console.log(digitToNepaliWords(1234));
 // Output: एक हजार दुई सय चौँतिस
 
@@ -40,78 +41,67 @@ console.log(digitToEnglishWords(1234));
 ### Currency Formatting
 
 ```typescript
-// Default currency (Nepali)
-console.log(digitToNepaliWords(1234, { isCurrency: true }));
-// Output: रुपैयाँ एक हजार दुई सय चौँतिस
+// Default Nepali currency
+console.log(digitToNepaliWords(1234.50, { 
+  isCurrency: true,
+  includeDecimal: true 
+}));
+// Output: रुपैयाँ एक हजार दुई सय चौँतिस पैसा पचास
 
-// Custom currency
-console.log(
-  digitToNepaliWords(1234, {
-    isCurrency: true,
-    currency: "डलर",
-  })
-);
-// Output: डलर एक हजार दुई सय चौँतिस
+// Custom currency with decimals
+console.log(digitToNepaliWords(1234.05, {
+  isCurrency: true,
+  includeDecimal: true,
+  currency: "डलर",
+  currencyDecimalSuffix: "सेन्ट"
+}));
+// Output: डलर एक हजार दुई सय चौँतिस सेन्ट पाँच
 
-// English currency with cents
-console.log(
-  digitToNepaliWords(1234.56, {
-    lang: "en",
-    isCurrency: true,
-    currency: "dollars",
-    includeDecimal: true,
-    decimalSuffix: "cents",
-  })
-);
-// Output: dollars one thousand two hundred thirty four cents fifty six
+// English currency format
+console.log(digitToNepaliWords(1234.50, {
+  lang: "en",
+  isCurrency: true,
+  includeDecimal: true,
+  currency: "dollars",
+  currencyDecimalSuffix: "cents"
+}));
+// Output: dollars one thousand two hundred thirty four cents fifty
 ```
 
-### Decimal Numbers
+### Decimal Handling
 
 ```typescript
-// Basic decimal
-console.log(digitToNepaliWords(1.5, { includeDecimal: true }));
-// Output: एक दशमलव पचास
+// Non-currency decimal (preserves original decimal)
+console.log(digitToNepaliWords(1.5, { 
+  includeDecimal: true 
+}));
+// Output: एक दशमलव पाँच
+
+// Currency decimal (pads to 2 digits)
+console.log(digitToNepaliWords(1.5, {
+  isCurrency: true,
+  includeDecimal: true
+}));
+// Output: रुपैयाँ एक पैसा पचास
 
 // Custom decimal suffix
-console.log(
-  digitToNepaliWords(1.5, {
-    includeDecimal: true,
-    decimalSuffix: "point",
-  })
-);
-// Output: एक point पचास
-
-// Currency with decimal
-console.log(
-  digitToNepaliWords(1234.56, {
-    isCurrency: true,
-    includeDecimal: true,
-    currency: "रुपैयाँ",
-    decimalSuffix: "पैसा",
-  })
-);
-// Output: रुपैयाँ एक हजार दुई सय चौँतिस पैसा छपन्न
+console.log(digitToNepaliWords(1.23, {
+  includeDecimal: true,
+  decimalSuffix: "point"
+}));
+// Output: एक point तेइस
 ```
 
 ### Large Numbers
 
 ```typescript
-// Lakhs (100,000)
-console.log(digitToNepaliWords(100000));
-// Output: एक लाख
-
-// Crores (10,000,000)
-console.log(digitToNepaliWords(10000000));
-// Output: एक करोड
-
-// Arab (1,000,000,000)
-console.log(digitToNepaliWords(1000000000));
-// Output: एक अरब
-
-// Mixed large number
+// Large number in Nepali
 console.log(digitToNepaliWords(1234567890));
 // Output: एक अरब तेइस करोड पैँतालीस लाख सतसट्ठी हजार आठ सय नब्बे
+
+// Large number in English
+console.log(digitToNepaliWords(1234567890, { lang: "en" }));
+// Output: one arab twenty three crore forty five lakh sixty seven thousand eight hundred ninety
 ```
 
 ## API Reference
@@ -122,13 +112,29 @@ Configuration options:
 
 ```typescript
 interface NepaliConverterConfig {
-  isCurrency?: boolean; // Format as currency
-  currency?: string; // Currency symbol/text (default: "रुपैयाँ")
-  includeDecimal?: boolean; // Include decimal part
-  decimalSuffix?: string; // Suffix for decimal (default: "दशमलव")
-  lang?: "en" | "ne"; // Output language (default: "ne")
+  isCurrency?: boolean;      // Format as currency
+  currency?: string;         // Currency symbol/text 
+                            // (default: "रुपैयाँ" for Nepali, "Rupees" for English)
+  includeDecimal?: boolean;  // Include decimal part
+  decimalSuffix?: string;    // Suffix for non-currency decimal
+                            // (default: "दशमलव" for Nepali, "point" for English)
+  currencyDecimalSuffix?: string; // Suffix for currency decimal
+                                 // (default: "पैसा" for Nepali, "paisa" for English)
+  lang?: "en" | "ne";       // Output language (default: "ne")
 }
 ```
+
+### Language-specific Defaults
+
+Nepali (lang: "ne"):
+- currency: "रुपैयाँ"
+- decimalSuffix: "दशमलव"
+- currencyDecimalSuffix: "पैसा"
+
+English (lang: "en"):
+- currency: "Rupees"
+- decimalSuffix: "point"
+- currencyDecimalSuffix: "paisa"
 
 ### digitToEnglishWords(num: number)
 
@@ -137,7 +143,6 @@ Converts number to English words using traditional English number system.
 ## Error Handling
 
 The library throws errors for:
-
 - Negative numbers
 - Non-numeric input
 - Invalid decimal values

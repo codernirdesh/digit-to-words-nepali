@@ -163,13 +163,52 @@ describe("Nepali Number to Words Converter", () => {
   });
 
   describe("Decimal Handling", () => {
+    describe("Currency Decimals", () => {
+      it("should pad single digit decimal to 2 digits in currency", () => {
+        const result = digitToNepaliWords(1.5, {
+          isCurrency: true,
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("रुपैयाँ एक पैसा पचास");
+      });
+
+      it("should handle zero padding in currency", () => {
+        const result = digitToNepaliWords(1.05, {
+          isCurrency: true,
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("रुपैयाँ एक पैसा पाँच");
+      });
+
+      it("should use custom decimal suffix with padded digits", () => {
+        const result = digitToNepaliWords(1.5, {
+          isCurrency: true,
+          includeDecimal: true,
+          currencyDecimalSuffix: "cents",
+          currency: "dollars"
+        });
+        expect(result).toBe("dollars एक cents पचास");
+      });
+
+      it("should truncate to 2 decimal places in currency", () => {
+        const result = digitToNepaliWords(1.567, {
+          isCurrency: true,
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("रुपैयाँ एक पैसा छपन्न");
+      });
+    });
+
     describe("Non-Currency Decimals", () => {
       it("should handle simple decimal numbers", () => {
         const result = digitToNepaliWords(1.5, { 
           includeDecimal: true,
           lang: "ne" 
         });
-        expect(result).toBe("एक दशमलव पचास");
+        expect(result).toBe("एक दशमलव पाँच");
       });
 
       it("should handle zero decimal part", () => {
@@ -193,28 +232,7 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           decimalSuffix: "point"
         });
-        expect(result).toBe("एक point पचास");
-      });
-    });
-
-    describe("Currency Decimals", () => {
-      it("should use custom decimal suffix when provided with currency", () => {
-        const result = digitToNepaliWords(1.5, {
-          isCurrency: true,
-          includeDecimal: true,
-          decimalSuffix: "cents",
-          currency: "dollars"
-        });
-        expect(result).toBe("dollars एक cents पचास");
-      });
-
-      it("should use default decimal suffix when not provided", () => {
-        const result = digitToNepaliWords(1.5, {
-          isCurrency: true,
-          includeDecimal: true,
-          lang: "ne"
-        });
-        expect(result).toBe("रुपैयाँ एक दशमलव पचास");
+        expect(result).toBe("एक point पाँच");
       });
     });
   });
@@ -279,7 +297,7 @@ describe("Nepali Number to Words Converter", () => {
         isCurrency: true,
         includeDecimal: true,
         currency: "dollars",
-        decimalSuffix: "cents"
+        currencyDecimalSuffix: "cents"
       });
       expect(result).toBe("dollars one cents fifty");
     });
@@ -325,24 +343,24 @@ describe("Nepali Number to Words Converter", () => {
 
   describe("Combined Features", () => {
     it("should handle English currency with custom decimal suffix", () => {
-      const result = digitToNepaliWords(1234567890, {
+      const result = digitToNepaliWords(1234567890.5, {
         lang: "en",
         isCurrency: true,
         currency: "dollars",
         includeDecimal: true,
-        decimalSuffix: "cents"
+        currencyDecimalSuffix: "cents"
       });
-      expect(result).toBe("dollars one arab twenty three crore forty five lakh sixty seven thousand eight hundred ninety cents zero");
+      expect(result).toBe("dollars one arab twenty three crore forty five lakh sixty seven thousand eight hundred ninety cents fifty");
     });
 
     it("should handle Nepali currency with custom decimal suffix", () => {
-      const result = digitToNepaliWords(1234567890.50, {
+      const result = digitToNepaliWords(1234567890.05, {
         isCurrency: true,
         includeDecimal: true,
         currency: "रुपैयाँ",
-        decimalSuffix: "पैसा"
+        currencyDecimalSuffix: "पैसा"
       });
-      expect(result).toBe("रुपैयाँ एक अरब तेइस करोड पैँतालीस लाख सतसट्ठी हजार आठ सय नब्बे पैसा पचास");
+      expect(result).toBe("रुपैयाँ एक अरब तेइस करोड पैँतालीस लाख सतसट्ठी हजार आठ सय नब्बे पैसा पाँच");
     });
 
     it("should handle English output with custom decimal suffix", () => {

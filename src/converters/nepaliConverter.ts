@@ -123,7 +123,7 @@ const SCALES = {
   SHISHANT: 1e33,
   SINGHAR: 1e35,
   MAHA_SINGHAR: 1e37,
-  ADANTA_SINGHAR: 1e39
+  ADANTA_SINGHAR: 1e39,
 } as const;
 
 // Scale names in English and Nepali
@@ -148,7 +148,7 @@ const scalesNepali: Record<number, [string, string]> = {
   [SCALES.SHISHANT]: ["shishant", "शिशान्त"],
   [SCALES.SINGHAR]: ["singhar", "सिंघर"],
   [SCALES.MAHA_SINGHAR]: ["maha singhar", "महासिंघर"],
-  [SCALES.ADANTA_SINGHAR]: ["adanta singhar", "अदन्त सिंघर"]
+  [SCALES.ADANTA_SINGHAR]: ["adanta singhar", "अदन्त सिंघर"],
 };
 
 // Define scale order first
@@ -171,7 +171,7 @@ const scaleOrder = [
   SCALES.ARAB,
   SCALES.CRORE,
   SCALES.LAKH,
-  SCALES.THOUSAND
+  SCALES.THOUSAND,
 ];
 
 // Then use it in cache initialization
@@ -229,155 +229,259 @@ export const unicodeToEnglishNumber = (numStr: string): number => {
   return num;
 };
 
-interface NepaliConverterConfig {
+// Types and interfaces
+interface LanguageConfig {
+  currency: string;
+  decimalSuffix: string;
+  currencyDecimalSuffix: string;
+}
+
+interface NumberScale {
+  value: number;
+  names: Record<Language, string>;
+}
+
+type Language = "en" | "ne";
+
+interface WordMapping {
+  en: string;
+  ne: string;
+}
+
+interface ConverterConfig {
   isCurrency?: boolean;
   currency?: string;
   includeDecimal?: boolean;
   decimalSuffix?: string;
-  lang?: "en" | "ne";
+  currencyDecimalSuffix?: string;
+  lang?: Language;
 }
 
-const defaultConfig: Required<NepaliConverterConfig> = {
-  isCurrency: false,
-  includeDecimal: false,
-  currency: "रुपैयाँ",
-  decimalSuffix: "दशमलव",
-  lang: "ne",
-};
+// Language configurations
+const LANGUAGE_CONFIGS: Record<Language, LanguageConfig> = {
+  ne: {
+    currency: "रुपैयाँ",
+    decimalSuffix: "दशमलव",
+    currencyDecimalSuffix: "पैसा",
+  },
+  en: {
+    currency: "Rupees",
+    decimalSuffix: "point",
+    currencyDecimalSuffix: "paisa",
+  },
+} as const;
 
-const validateInput = (integerPart: string, decimalPart?: string): void => {
-  if (decimalPart && !DIGIT_REGEX.test(decimalPart)) {
-    throw new Error("Decimal part must contain only valid digits");
+// Number scales configuration
+const NUMBER_SCALES: NumberScale[] = [
+  { value: 1e39, names: { en: "adanta singhar", ne: "अदन्त सिंघर" } },
+  { value: 1e37, names: { en: "maha singhar", ne: "महासिंघर" } },
+  { value: 1e35, names: { en: "singhar", ne: "सिंघर" } },
+  { value: 1e33, names: { en: "shishant", ne: "शिशान्त" } },
+  { value: 1e31, names: { en: "maha ant", ne: "महाअन्त" } },
+  { value: 1e29, names: { en: "ant", ne: "अन्त" } },
+  { value: 1e27, names: { en: "paraardha", ne: "परार्ध" } },
+  { value: 1e25, names: { en: "madh", ne: "मध" } },
+  { value: 1e23, names: { en: "jald", ne: "जल्द" } },
+  { value: 1e21, names: { en: "ank", ne: "अंक" } },
+  { value: 1e19, names: { en: "udpadh", ne: "उपाध" } },
+  { value: 1e17, names: { en: "shankha", ne: "शंख" } },
+  { value: 1e15, names: { en: "padma", ne: "पद्म" } },
+  { value: 1e13, names: { en: "neel", ne: "नील" } },
+  { value: 1e11, names: { en: "kharab", ne: "खरब" } },
+  { value: 1e9, names: { en: "arab", ne: "अरब" } },
+  { value: 1e7, names: { en: "crore", ne: "करोड" } },
+  { value: 1e5, names: { en: "lakh", ne: "लाख" } },
+  { value: 1e3, names: { en: "thousand", ne: "हजार" } },
+  { value: 1e2, names: { en: "hundred", ne: "सय" } },
+] as const;
+
+// Complete the number word mappings (0-99) from the existing unitsNepali
+const NUMBER_WORDS = new Map<number, WordMapping>(
+  Object.entries(unitsNepali).map(([num, [en, ne]]) => [
+    parseInt(num),
+    { en, ne }
+  ])
+);
+
+// Utility class for number conversion
+class NumberConverter {
+  private static instance: NumberConverter;
+  private readonly wordCache: Map<number, WordMapping>;
+
+  private constructor() {
+    this.wordCache = NUMBER_WORDS;
   }
 
-  if (!DIGIT_REGEX.test(integerPart)) {
-    throw new Error("Input must contain only valid digits");
+  static getInstance(): NumberConverter {
+    if (!NumberConverter.instance) {
+      NumberConverter.instance = new NumberConverter();
+    }
+    return NumberConverter.instance;
   }
-};
 
-// Pre-compute number to word mappings
-const WORD_CACHE: Record<number, [string, string]> = {};
-for (let i = 0; i <= 99; i++) {
-  WORD_CACHE[i] = unitsNepali[i];
+  convertToWords(
+    num: number,
+    config: Required<ConverterConfig>
+  ): string {
+    if (!this.isValidNumber(num)) {
+      throw new Error("Invalid number input");
+    }
+
+    const parts = this.splitNumber(num);
+    const words = this.convertIntegerPart(parts.integer, config);
+
+    if (config.includeDecimal) {
+      this.appendDecimalPart(words, parts.decimal, config);
+    }
+
+    return this.formatResult(words, config);
+  }
+
+  private isValidNumber(num: number): boolean {
+    if (typeof num !== "number" || 
+        isNaN(num) || 
+        !isFinite(num) || 
+        num < 0) {
+      // First check if it's a valid number at all
+      throw new Error("Input must contain only valid digits");
+    }
+
+    // Then validate the decimal part if it exists
+    const [, decimalPart] = num.toString().split(".");
+    if (decimalPart && !/^\d+$/.test(decimalPart)) {
+      throw new Error("Decimal part must contain only valid digits");
+    }
+
+    return true;
+  }
+
+  private splitNumber(num: number): { integer: number; decimal?: string } {
+    const [intPart, decPart] = num.toString().split(".");
+    
+    // Validate integer part
+    if (!/^\d+$/.test(intPart)) {
+      throw new Error("Input must contain only valid digits");
+    }
+    
+    // Validate decimal part if exists
+    if (decPart && !/^\d+$/.test(decPart)) {
+      throw new Error("Decimal part must contain only valid digits");
+    }
+
+    return {
+      integer: parseInt(intPart),
+      decimal: decPart,
+    };
+  }
+
+  private convertIntegerPart(
+    num: number,
+    config: Required<ConverterConfig>
+  ): string[] {
+    if (num === 0) {
+      return [this.getWordMapping(0, config.lang)];
+    }
+
+    if (num <= 99) {
+      return [this.getWordMapping(num, config.lang)];
+    }
+
+    const words: string[] = [];
+    let remaining = num;
+
+    for (const scale of NUMBER_SCALES) {
+      if (remaining < scale.value) continue;
+      
+      const quotient = Math.floor(remaining / scale.value);
+      remaining %= scale.value;
+      
+      if (quotient > 0) {
+        const quotientWords = this.convertToWords(quotient, {
+          ...config,
+          isCurrency: false,
+          includeDecimal: false
+        });
+        words.push(`${quotientWords} ${scale.names[config.lang]}`);
+      }
+    }
+
+    if (remaining > 0) {
+      words.push(this.getWordMapping(remaining, config.lang));
+    }
+
+    return words;
+  }
+
+  private appendDecimalPart(
+    words: string[],
+    decimal: string | undefined,
+    config: Required<ConverterConfig>
+  ): void {
+    if (!config.includeDecimal) return;
+
+    // Add appropriate decimal suffix
+    if (config.isCurrency) {
+      words.push(config.currencyDecimalSuffix);
+    } else {
+      words.push(config.decimalSuffix);
+    }
+
+    // Handle decimal number
+    if (!decimal) {
+      words.push(this.getWordMapping(0, config.lang));
+      return;
+    }
+
+    let decimalNum: number;
+    if (config.isCurrency) {
+      // For currency: pad to 2 digits, handle .5 as 50, .05 as 5
+      const paddedDecimal = decimal.padEnd(2, "0").slice(0, 2);
+      decimalNum = parseInt(paddedDecimal);
+    } else {
+      // For non-currency: keep original value
+      decimalNum = parseInt(decimal);
+    }
+
+    words.push(this.getWordMapping(decimalNum, config.lang));
+  }
+
+  private formatResult(
+    words: string[],
+    config: Required<ConverterConfig>
+  ): string {
+    let result = words.join(" ").trim();
+    if (config.isCurrency) {
+      result = `${config.currency} ${result}`;
+    }
+    return result.trim();
+  }
+
+  private getWordMapping(num: number, lang: Language): string {
+    const mapping = this.wordCache.get(num);
+    if (!mapping) {
+      throw new Error(`No word mapping found for number: ${num}`);
+    }
+    return mapping[lang];
+  }
 }
 
-// Optimize handleScale for performance
-const handleScale = (
-  num: number,
-  scale: number,
-  scaleName: string,
-  words: string[],
-  lang: "en" | "ne"
-): number => {
-  if (num >= scale) {
-    const value = Math.floor(num / scale);
-    const remainder = num % scale;
-    words.push(
-      `${digitToNepaliWords(value, { lang })} ${
-        lang === "en" ? scaleName : SCALE_WORDS[scale][1]
-      }`
-    );
-    return remainder;
-  }
-  return num;
-};
-
-// Optimize digitToNepaliWords
+// Main conversion function
 export const digitToNepaliWords = (
   num: number,
-  config: NepaliConverterConfig = {}
+  config: ConverterConfig = {}
 ): string => {
-  if (typeof num !== "number") {
-    throw new Error("Input must be a number");
-  }
-
-  const mergedConfig = {
+  const defaultConfig = LANGUAGE_CONFIGS[config.lang ?? "ne"];
+  const mergedConfig: Required<ConverterConfig> = {
     ...defaultConfig,
     ...config,
+    isCurrency: config.isCurrency ?? false,
+    includeDecimal: config.includeDecimal ?? false,
+    lang: config.lang ?? "ne",
+    // Ensure proper inheritance of decimal suffixes
+    decimalSuffix: config.decimalSuffix ?? defaultConfig.decimalSuffix,
+    currencyDecimalSuffix: config.currencyDecimalSuffix ?? defaultConfig.currencyDecimalSuffix,
+    currency: config.currency ?? defaultConfig.currency
   };
 
-  const [integerPart, decimalPart] = num.toString().split(".");
-  validateInput(integerPart, decimalPart);
-
-  const words: string[] = [];
-  let integerNum = parseInt(integerPart);
-
-  // Fast path for small numbers
-  if (integerNum <= 99) {
-    const cached = WORD_CACHE[integerNum];
-    words.push(mergedConfig.lang === "en" ? cached[0] : cached[1]);
-  } else {
-    let remaining = integerNum;
-
-    // Process scales in chunks
-    for (const scale of scaleOrder) {
-      if (remaining < scale) continue;
-      remaining = handleScale(
-        remaining,
-        scale,
-        SCALE_WORDS[scale][0],
-        words,
-        mergedConfig.lang
-      );
-    }
-
-    // Handle hundreds
-    if (remaining >= SCALES.HUNDRED) {
-      const hundreds = Math.floor(remaining / SCALES.HUNDRED);
-      remaining = remaining % SCALES.HUNDRED;
-      const hundredWord = mergedConfig.lang === "en" ? "hundred" : "सय";
-      
-      // Use cached values for hundreds
-      const hundredStr = hundreds === 1 
-        ? mergedConfig.lang === "en" ? "one" : "एक"
-        : digitToNepaliWords(hundreds, { lang: mergedConfig.lang });
-      
-      words.push(`${hundredStr} ${hundredWord}`);
-    }
-
-    // Use cached values for remaining digits
-    if (remaining > 0) {
-      const cached = WORD_CACHE[remaining];
-      words.push(mergedConfig.lang === "en" ? cached[0] : cached[1]);
-    }
-  }
-
-  handleDecimal(decimalPart, mergedConfig, words);
-
-  // Fast string concatenation
-  let result = words.join(" ");
-  if (mergedConfig.isCurrency && mergedConfig.currency) {
-    result = mergedConfig.currency + " " + result;
-  }
-
-  return result;
+  return NumberConverter.getInstance().convertToWords(num, mergedConfig);
 };
-
-const handleDecimal = (
-  decimalPart: string | undefined,
-  config: Required<NepaliConverterConfig>,
-  words: string[]
-): void => {
-  if (!config.includeDecimal) {
-    return;
-  }
-
-  const suffix = config.decimalSuffix || defaultConfig.decimalSuffix;
-  words.push(suffix);
-
-  if (!decimalPart) {
-    words.push(digitToNepaliWords(0, { lang: config.lang }));
-    return;
-  }
-
-  const normalizedDecimal = decimalPart.padEnd(2, "0").slice(0, 2);
-  words.push(
-    digitToNepaliWords(parseInt(normalizedDecimal), {
-      lang: config.lang,
-    })
-  );
-};
-
-console.log(digitToNepaliWords(1.5, { lang: "en", includeDecimal: true }));
-console.log(digitToNepaliWords(12764534.66, { lang: "ne", isCurrency: true, includeDecimal: true, decimalSuffix: "पैसा" }));
-
