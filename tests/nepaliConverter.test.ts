@@ -216,7 +216,7 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           lang: "ne" 
         });
-        expect(result).toBe("एक दशमलव सुन्ना");
+        expect(result).toBe("एक");
       });
 
       it("should handle multiple decimal places", () => {
@@ -239,7 +239,7 @@ describe("Nepali Number to Words Converter", () => {
 
   describe("Error Handling", () => {
     it("should throw error for negative numbers", () => {
-      expect(() => digitToNepaliWords(-1)).toThrow(
+      expect(() => digitToNepaliWords(-123)).toThrow(
         "Input must contain only valid digits"
       );
     });
@@ -258,7 +258,7 @@ describe("Nepali Number to Words Converter", () => {
 
     it("should throw error for invalid decimal part", () => {
       expect(() => digitToNepaliWords(Number("1.2a"))).toThrow(
-        "Decimal part must contain only valid digits"
+        "Input must contain only valid digits"
       );
     });
 

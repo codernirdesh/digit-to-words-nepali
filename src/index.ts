@@ -1,2 +1,2 @@
 export { digitToEnglishWords } from "./converters/englishConverter";
-export { digitToNepaliWords } from "./converters/nepaliConverter";
+export { digitToNepaliWords, unicodeToEnglishNumber } from "./converters/nepaliConverter";
