@@ -1,6 +1,6 @@
 {
   "name": "digit-to-words-nepali",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Convert digits to words in English and Nepali.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
