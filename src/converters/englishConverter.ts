@@ -36,8 +36,14 @@ const tens = [
 ];
 const scales = ["", "Thousand", "Million", "Billion"];
 
-export const digitToEnglishWords = (num: number): string => {
-  if (num === 0) return "Zero";
+export const digitToEnglishWords = (num: number | string | bigint): string => {
+  const bigNum = BigInt(num);
+  
+  if (bigNum < 0n) {
+    throw new Error("Input must contain only valid digits");
+  }
+
+  if (bigNum === 0n) return "Zero";
 
   const convertChunk = (n: number): string => {
     let words = "";
@@ -57,13 +63,14 @@ export const digitToEnglishWords = (num: number): string => {
 
   const chunks: string[] = [];
   let scaleIndex = 0;
+  let remaining = bigNum;
 
-  while (num > 0) {
-    const chunk = num % 1000;
+  while (remaining > 0n) {
+    const chunk = Number(remaining % 1000n);
     if (chunk > 0) {
       chunks.unshift(`${convertChunk(chunk)} ${scales[scaleIndex]}`.trim());
     }
-    num = Math.floor(num / 1000);
+    remaining = remaining / 1000n;
     scaleIndex++;
   }
 

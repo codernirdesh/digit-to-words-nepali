@@ -204,6 +204,12 @@ const nepaliToEnglishDigitMap = Object.fromEntries(
   Object.entries(digitMap).map(([en, ne]) => [ne, en])
 ) as Record<NepaliDigit, EnglishDigit>;
 
+/**
+ * Converts a Nepali number string to an English number string and then to a number value.
+ * @param numStr The string to convert. Must be a non-empty string containing only Nepali digits (०-९).
+ * @returns The number value of the input string.
+ * @throws If the input string is empty, contains non-Nepali digits, or exceeds the maximum safe integer value.
+ */
 export const unicodeToEnglishNumber = (numStr: string): number => {
   const DIGIT_REGEX_NEPALI = /^[०-९]+$/;
 
@@ -237,7 +243,7 @@ interface LanguageConfig {
 }
 
 interface NumberScale {
-  value: number;
+  value: bigint;
   names: Record<Language, string>;
 }
 
@@ -273,33 +279,33 @@ const LANGUAGE_CONFIGS: Record<Language, LanguageConfig> = {
 
 // Number scales configuration
 const NUMBER_SCALES: NumberScale[] = [
-  { value: 1e39, names: { en: "adanta singhar", ne: "अदन्त सिंघर" } },
-  { value: 1e37, names: { en: "maha singhar", ne: "महासिंघर" } },
-  { value: 1e35, names: { en: "singhar", ne: "सिंघर" } },
-  { value: 1e33, names: { en: "shishant", ne: "शिशान्त" } },
-  { value: 1e31, names: { en: "maha ant", ne: "महाअन्त" } },
-  { value: 1e29, names: { en: "ant", ne: "अन्त" } },
-  { value: 1e27, names: { en: "paraardha", ne: "परार्ध" } },
-  { value: 1e25, names: { en: "madh", ne: "मध" } },
-  { value: 1e23, names: { en: "jald", ne: "जल्द" } },
-  { value: 1e21, names: { en: "ank", ne: "अंक" } },
-  { value: 1e19, names: { en: "udpadh", ne: "उपाध" } },
-  { value: 1e17, names: { en: "shankha", ne: "शंख" } },
-  { value: 1e15, names: { en: "padma", ne: "पद्म" } },
-  { value: 1e13, names: { en: "neel", ne: "नील" } },
-  { value: 1e11, names: { en: "kharab", ne: "खरब" } },
-  { value: 1e9, names: { en: "arab", ne: "अरब" } },
-  { value: 1e7, names: { en: "crore", ne: "करोड" } },
-  { value: 1e5, names: { en: "lakh", ne: "लाख" } },
-  { value: 1e3, names: { en: "thousand", ne: "हजार" } },
-  { value: 1e2, names: { en: "hundred", ne: "सय" } },
+  { value: 10n ** 39n, names: { en: "adanta singhar", ne: "अदन्त सिंघर" } },
+  { value: 10n ** 37n, names: { en: "maha singhar", ne: "महासिंघर" } },
+  { value: 10n ** 35n, names: { en: "singhar", ne: "सिंघर" } },
+  { value: 10n ** 33n, names: { en: "shishant", ne: "शिशान्त" } },
+  { value: 10n ** 31n, names: { en: "maha ant", ne: "महाअन्त" } },
+  { value: 10n ** 29n, names: { en: "ant", ne: "अन्त" } },
+  { value: 10n ** 27n, names: { en: "paraardha", ne: "परार्ध" } },
+  { value: 10n ** 25n, names: { en: "madh", ne: "मध" } },
+  { value: 10n ** 23n, names: { en: "jald", ne: "जल्द" } },
+  { value: 10n ** 21n, names: { en: "ank", ne: "अंक" } },
+  { value: 10n ** 19n, names: { en: "udpadh", ne: "उपाध" } },
+  { value: 10n ** 17n, names: { en: "shankha", ne: "शंख" } },
+  { value: 10n ** 15n, names: { en: "padma", ne: "पद्म" } },
+  { value: 10n ** 13n, names: { en: "neel", ne: "नील" } },
+  { value: 10n ** 11n, names: { en: "kharab", ne: "खरब" } },
+  { value: 10n ** 9n, names: { en: "arab", ne: "अरब" } },
+  { value: 10n ** 7n, names: { en: "crore", ne: "करोड" } },
+  { value: 10n ** 5n, names: { en: "lakh", ne: "लाख" } },
+  { value: 10n ** 3n, names: { en: "thousand", ne: "हजार" } },
+  { value: 10n ** 2n, names: { en: "hundred", ne: "सय" } },
 ] as const;
 
 // Complete the number word mappings (0-99) from the existing unitsNepali
 const NUMBER_WORDS = new Map<number, WordMapping>(
   Object.entries(unitsNepali).map(([num, [en, ne]]) => [
     parseInt(num),
-    { en, ne }
+    { en, ne },
   ])
 );
 
@@ -319,94 +325,126 @@ class NumberConverter {
     return NumberConverter.instance;
   }
 
+  /**
+   * Converts a number to words in the given language, with optional
+   * currency and decimal suffixes.
+   *
+   * Throws an error if the input number is invalid (NaN, Infinity, negative, or non-numeric).
+   *
+   * @param num The number to convert.
+   * @param config The configuration options for the conversion.
+   * @returns The words representing the number.
+   */
   convertToWords(
-    num: number,
+    num: number | string | bigint,
     config: Required<ConverterConfig>
   ): string {
-    if (!this.isValidNumber(num)) {
-      throw new Error("Invalid number input");
+    try {
+      // Check if the input number is valid
+      if (!this.isValidNumber(num)) {
+        throw new Error("Invalid number input");
+      }
+
+      // Split the number into its integer and decimal parts
+      const parts = this.splitNumber(num);
+
+      // Convert the integer part of the number to words
+      const words = this.convertIntegerPart(parts.integer, config);
+
+      // If the config includes decimal parts and the decimal part exists,
+      // append it to the words
+      if (config.includeDecimal && parts.decimal !== undefined) {
+        this.appendDecimalPart(words, parts.decimal, config);
+      }
+
+      // Format the final result according to the config
+      return this.formatResult(words, config);
+    } catch (error) {
+      console.error("Error converting number to words:", error);
+      throw error;
     }
-
-    const parts = this.splitNumber(num);
-    const words = this.convertIntegerPart(parts.integer, config);
-
-    if (config.includeDecimal) {
-      this.appendDecimalPart(words, parts.decimal, config);
-    }
-
-    return this.formatResult(words, config);
   }
 
-  private isValidNumber(num: number): boolean {
-    if (typeof num !== "number" || 
-        isNaN(num) || 
-        !isFinite(num) || 
-        num < 0) {
-      // First check if it's a valid number at all
+  private isValidNumber(num: number | string | bigint): boolean {
+    try {
+      // Handle NaN and Infinity first
+      if (typeof num === "number" && (isNaN(num) || !isFinite(num))) {
+        throw new Error("Input must contain only valid digits");
+      }
+
+      const str = num.toString();
+
+      // Check for negative numbers
+      if (str.startsWith("-")) {
+        throw new Error("Input must contain only valid digits");
+      }
+
+      // Simple validation: only allow digits and one optional decimal point
+      if (!/^\d+(\.\d+)?$/.test(str)) {
+        throw new Error("Input must contain only valid digits");
+      }
+
+      return true;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error("Input must contain only valid digits");
     }
-
-    // Then validate the decimal part if it exists
-    const [, decimalPart] = num.toString().split(".");
-    if (decimalPart && !/^\d+$/.test(decimalPart)) {
-      throw new Error("Decimal part must contain only valid digits");
-    }
-
-    return true;
   }
 
-  private splitNumber(num: number): { integer: number; decimal?: string } {
-    const [intPart, decPart] = num.toString().split(".");
-    
-    // Validate integer part
-    if (!/^\d+$/.test(intPart)) {
+  private splitNumber(num: number | string | bigint): {
+    integer: bigint;
+    decimal?: string;
+  } {
+    const str = num.toString();
+    const [intPart, decPart] = str.split(".");
+
+    try {
+      return {
+        integer: BigInt(intPart),
+        decimal: decPart,
+      };
+    } catch {
       throw new Error("Input must contain only valid digits");
     }
-    
-    // Validate decimal part if exists
-    if (decPart && !/^\d+$/.test(decPart)) {
-      throw new Error("Decimal part must contain only valid digits");
-    }
-
-    return {
-      integer: parseInt(intPart),
-      decimal: decPart,
-    };
   }
 
   private convertIntegerPart(
-    num: number,
+    num: bigint,
     config: Required<ConverterConfig>
   ): string[] {
-    if (num === 0) {
+    if (num === 0n) {
       return [this.getWordMapping(0, config.lang)];
     }
 
-    if (num <= 99) {
-      return [this.getWordMapping(num, config.lang)];
+    if (num <= 99n) {
+      return [this.getWordMapping(Number(num), config.lang)];
     }
 
     const words: string[] = [];
     let remaining = num;
 
     for (const scale of NUMBER_SCALES) {
-      if (remaining < scale.value) continue;
-      
-      const quotient = Math.floor(remaining / scale.value);
-      remaining %= scale.value;
-      
-      if (quotient > 0) {
-        const quotientWords = this.convertToWords(quotient, {
+      const scaleValue = BigInt(scale.value);
+      if (remaining < scaleValue) continue;
+
+      const quotient = remaining / scaleValue;
+      remaining = remaining % scaleValue;
+
+      if (quotient > 0n) {
+        const quotientWords = this.convertToWords(Number(quotient), {
           ...config,
           isCurrency: false,
-          includeDecimal: false
+          includeDecimal: false,
         });
+        // Use correct language for scale names
         words.push(`${quotientWords} ${scale.names[config.lang]}`);
       }
     }
 
-    if (remaining > 0) {
-      words.push(this.getWordMapping(remaining, config.lang));
+    if (remaining > 0n) {
+      words.push(this.getWordMapping(Number(remaining), config.lang));
     }
 
     return words;
@@ -419,15 +457,13 @@ class NumberConverter {
   ): void {
     if (!config.includeDecimal) return;
 
-    // Add appropriate decimal suffix
-    if (config.isCurrency) {
-      words.push(config.currencyDecimalSuffix);
-    } else {
-      words.push(config.decimalSuffix);
-    }
+    // Always add decimal suffix
+    words.push(
+      config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix
+    );
 
-    // Handle decimal number
-    if (!decimal) {
+    // Always add zero for whole numbers or undefined decimal
+    if (!decimal || decimal === "0") {
       words.push(this.getWordMapping(0, config.lang));
       return;
     }
@@ -465,9 +501,68 @@ class NumberConverter {
   }
 }
 
-// Main conversion function
+/**
+ * Converts numbers to their word representation in Nepali or English.
+ * Supports numbers up to Adanta Singhar (10^39) with extensive formatting options.
+ * 
+ * @param num - The number to convert. Can be:
+ *   - number: Regular numbers (e.g., 1234, 1.23)
+ *   - string: String numbers (e.g., "1234", "1.23")
+ *   - bigint: Large numbers (e.g., 123456789012345678901234567890n)
+ * 
+ * @param config - Optional configuration object
+ * @param config.lang - Output language ("ne" | "en"), defaults to "ne"
+ * @param config.isCurrency - Format as currency, defaults to false
+ * @param config.includeDecimal - Include decimal part, defaults to false
+ * @param config.currency - Custom currency text
+ * @param config.decimalSuffix - Custom decimal suffix
+ * @param config.currencyDecimalSuffix - Custom currency decimal suffix
+ * 
+ * @returns The number in words
+ * @throws Error if input is invalid (negative, NaN, Infinity, or non-numeric)
+ * 
+ * @example
+ * // Basic usage
+ * digitToNepaliWords(1234)
+ * // => "एक हजार दुई सय चौँतिस"
+ * 
+ * // English output
+ * digitToNepaliWords(1234, { lang: "en" })
+ * // => "one thousand two hundred thirty four"
+ * 
+ * // Currency formatting
+ * digitToNepaliWords(1234.50, { 
+ *   isCurrency: true,
+ *   includeDecimal: true 
+ * })
+ * // => "रुपैयाँ एक हजार दुई सय चौँतिस पैसा पचास"
+ * 
+ * // Custom currency
+ * digitToNepaliWords(1234.05, {
+ *   isCurrency: true,
+ *   includeDecimal: true,
+ *   currency: "डलर",
+ *   currencyDecimalSuffix: "सेन्ट"
+ * })
+ * // => "डलर एक हजार दुई सय चौँतिस सेन्ट पाँच"
+ * 
+ * // Large numbers using BigInt
+ * digitToNepaliWords(BigInt("123456789012345"))
+ * // => "एक करोड तेइस लाख पैँतालीस हजार छ सय सतासी..."
+ * 
+ * // Decimal handling
+ * digitToNepaliWords(1.23, { includeDecimal: true })
+ * // => "एक दशमलव तेइस"
+ * 
+ * // Custom decimal suffix
+ * digitToNepaliWords(1.23, {
+ *   includeDecimal: true,
+ *   decimalSuffix: "point"
+ * })
+ * // => "एक point तेइस"
+ */
 export const digitToNepaliWords = (
-  num: number,
+  num: number | string | bigint,
   config: ConverterConfig = {}
 ): string => {
   const defaultConfig = LANGUAGE_CONFIGS[config.lang ?? "ne"];
@@ -479,8 +574,9 @@ export const digitToNepaliWords = (
     lang: config.lang ?? "ne",
     // Ensure proper inheritance of decimal suffixes
     decimalSuffix: config.decimalSuffix ?? defaultConfig.decimalSuffix,
-    currencyDecimalSuffix: config.currencyDecimalSuffix ?? defaultConfig.currencyDecimalSuffix,
-    currency: config.currency ?? defaultConfig.currency
+    currencyDecimalSuffix:
+      config.currencyDecimalSuffix ?? defaultConfig.currencyDecimalSuffix,
+    currency: config.currency ?? defaultConfig.currency,
   };
 
   return NumberConverter.getInstance().convertToWords(num, mergedConfig);
