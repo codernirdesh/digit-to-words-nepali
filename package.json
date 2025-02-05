@@ -1,7 +1,7 @@
 {
   "name": "digit-to-words-nepali",
-  "version": "0.0.4",
-  "description": "Convert digits to words in English and Nepali.",
+  "version": "0.0.5",
+  "description": "A comprehensive TypeScript library for converting numbers to words in English and Nepali languages. Supports numbers up to 10^39 (Adanta Singhar), currency formatting, decimal handling, and BigInt. Zero dependencies, fully tested.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -12,18 +12,35 @@
   },
   "keywords": [
     "digit",
-    "words",
+    "words", 
     "nepali",
     "english",
-    "typescript"
+    "typescript",
+    "number-to-words",
+    "currency-formatter",
+    "nepali-language",
+    "number-converter"
   ],
   "author": "Nirdesh Pokharel",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codernirdesh/digit-to-words-nepali.git"
+  },
+  "bugs": {
+    "url": "https://github.com/codernirdesh/digit-to-words-nepali/issues"
+  },
+  "homepage": "https://github.com/codernirdesh/digit-to-words-nepali#readme",
   "devDependencies": {
     "@types/jest": "^29.0.0",
-    "jest": "^29.0.0",
+    "jest": "^29.0.0", 
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
-  }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ]
 }
