@@ -20,7 +20,7 @@ A TypeScript library to convert numbers into their word representations in Engli
 npm install digit-to-words-nepali
 ```
 
-## Usage
+## Usage Examples
 
 ### Basic Usage
 
@@ -30,11 +30,13 @@ import { digitToNepaliWords } from "digit-to-words-nepali";
 // Simple number conversion
 digitToNepaliWords(1234); // "एक हजार दुई सय चौँतिस"
 
-// Large numbers using BigInt
-digitToNepaliWords(BigInt("123456789012345")); // "एक करोड तेइस लाख..."
+// With English output
+digitToNepaliWords(1234, { lang: "en" });
+// Output: "one thousand two hundred thirty four"
 
-// English output
-digitToNepaliWords(1234, { lang: "en" }); // "one thousand two hundred thirty four"
+// Zero
+digitToNepaliWords(0);
+// Output: "सुन्ना"
 ```
 
 ### Currency Formatting
@@ -45,73 +47,100 @@ digitToNepaliWords(1234.5, {
   isCurrency: true,
   includeDecimal: true,
 });
-// "रुपैयाँ एक हजार दुई सय चौँतिस पैसा पचास"
+// Output: "रुपैयाँ एक हजार दुई सय चौँतिस पैसा पचास"
 
-// Custom currency
+// Custom currency in English
 digitToNepaliWords(1234.05, {
+  lang: "en",
   isCurrency: true,
   includeDecimal: true,
-  currency: "डलर",
-  currencyDecimalSuffix: "सेन्ट",
+  currency: "dollars",
+  currencyDecimalSuffix: "cents"
 });
-// "डलर एक हजार दुई सय चौँतिस सेन्ट पाँच"
+// Output: "dollars one thousand two hundred thirty four cents five"
+```
+
+### Large Numbers
+
+```typescript
+// Large number (1 Arab)
+digitToNepaliWords(BigInt("1000000000"));
+// Output: "एक अरब"
+
+// Larger number (12 Kharab 34 Arab 56 Crore 78 Lakh 90 Thousand)
+digitToNepaliWords(BigInt("1234567890000"));
+// Output: "बाह्र खरब चौँतिस अरब छपन्न करोड अठहत्तर लाख नब्बे हजार"
+
+// Very large number (1 Padma)
+digitToNepaliWords(BigInt("1" + "0".repeat(15)));
+// Output: "एक पद्म"
+
+// Massive number (123 Shankha 456 Padma 789 Neel)
+digitToNepaliWords(BigInt("123456789" + "0".repeat(15)));
+// Output: "एक सय तेइस शंख चार सय छपन्न पद्म सात सय उनान्नब्बे नील"
+
+// Maximum supported (1 Adanta Singhar)
+digitToNepaliWords(BigInt("1" + "0".repeat(39)));
+// Output: "एक अदन्त सिंघर"
+
+// Complex large number with English output
+digitToNepaliWords(BigInt("987654321987654321"), { lang: "en" });
+// Output: "nine shankha eighty seven padma sixty five neel forty three
+//          kharab twenty one arab ninety eight crore seventy six lakh
+//          fifty four thousand three hundred twenty one"
+
+// Complex large number with Nepali output
+digitToNepaliWords(BigInt("987654321987654321"));
+// Output: "नौ शंख सतासी पद्म पैंसट्ठी नील त्रिचालीस खरब एक्काइस अरब अन्ठान्नब्बे करोड
+//          छयहत्तर लाख चवन्न हजार तीन सय एक्काइस"
+```
+
+### Working with Negative Numbers
+The library focuses on positive number conversion. For negative numbers, use this pattern:
+
+```typescript
+// Handle negative numbers in your application logic:
+const num = -123;
+const prefix = num < 0 ? "ऋणात्मक" : "";
+const words = digitToNepaliWords(Math.abs(num));
+console.log(`${prefix} ${words}`);
+// Output: "ऋणात्मक एक सय तेइस"
 ```
 
 ### Decimal Handling
 
 ```typescript
 // Regular decimal
-digitToNepaliWords(1.23, {
-  includeDecimal: true,
+digitToNepaliWords(1.23, { 
+  includeDecimal: true 
 });
-// "एक दशमलव तेइस"
+// Output: "एक दशमलव तेइस"
 
 // Custom decimal suffix
 digitToNepaliWords(1.23, {
+  lang: "en",
   includeDecimal: true,
-  decimalSuffix: "point",
+  decimalSuffix: "point"
 });
-// "एक point तेइस"
+// Output: "one point twenty three"
 ```
 
-## API Reference
-
-### digitToNepaliWords()
+## Configuration Options
 
 ```typescript
-function digitToNepaliWords(
-  num: number | string | bigint,
-  config?: NepaliConverterConfig
-): string;
-
-interface NepaliConverterConfig {
-  lang?: "en" | "ne"; // Output language (default: "ne")
-  isCurrency?: boolean; // Format as currency (default: false)
-  includeDecimal?: boolean; // Include decimal part (default: false)
-  currency?: string; // Custom currency text
-  decimalSuffix?: string; // Custom decimal suffix
+interface ConverterConfig {
+  lang?: "en" | "ne";           // Output language (default: "ne")
+  isCurrency?: boolean;         // Format as currency (default: false)
+  includeDecimal?: boolean;     // Include decimal part (default: false)
+  currency?: string;            // Custom currency text
+  decimalSuffix?: string;       // Custom decimal suffix
   currencyDecimalSuffix?: string; // Custom currency decimal suffix
 }
 ```
 
-## Input Validation
+### Default Values
 
-The library performs strict input validation:
-
-```typescript
-// All these will throw "Input must contain only valid digits"
-digitToNepaliWords(-123); // Negative numbers
-digitToNepaliWords("abc"); // Non-numeric input
-digitToNepaliWords("1a2"); // Invalid integer part
-digitToNepaliWords("1.2a"); // Invalid decimal part
-digitToNepaliWords(NaN); // NaN
-digitToNepaliWords(Infinity); // Infinity
-```
-
-## Language-specific Defaults
-
-### Nepali (lang: "ne")
-
+#### Nepali (lang: "ne")
 ```typescript
 {
   currency: "रुपैयाँ",
@@ -120,8 +149,7 @@ digitToNepaliWords(Infinity); // Infinity
 }
 ```
 
-### English (lang: "en")
-
+#### English (lang: "en")
 ```typescript
 {
   currency: "Rupees",
@@ -135,7 +163,16 @@ digitToNepaliWords(Infinity); // Infinity
 1. For large numbers (> Number.MAX_SAFE_INTEGER), use BigInt:
 
 ```typescript
-digitToNepaliWords(BigInt("12345678901234567890"));
+try {
+  // These will throw "Input must contain only valid digits"
+  digitToNepaliWords(-123);        // Negative numbers
+  digitToNepaliWords("abc");       // Non-numeric input
+  digitToNepaliWords("1.2a");      // Invalid decimal
+  digitToNepaliWords(NaN);         // NaN
+  digitToNepaliWords(Infinity);    // Infinity
+} catch (error) {
+  console.error(error.message);
+}
 ```
 
 2. For currency values, always set both flags:
@@ -164,6 +201,11 @@ MIT License - see LICENSE file for details.
 ## Contributing
 
 Contributions welcome! Please check our contributing guidelines.
+
+<a href="https://github.com/codernirdesh/digit-to-words-nepali/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=codernirdesh/digit-to-words-nepali" />
+</a>
+
 
 ## Support
 
@@ -195,14 +237,3 @@ The library supports numbers up to Adanta Singhar (10^39). Here's the complete s
 | 10^35 | singhar        | सिंघर       | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000       |
 | 10^37 | maha singhar   | महासिंघर    | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000    |
 | 10^39 | adanta singhar | अदन्त सिंघर | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000 |
-
-Examples:
-
-```typescript
-// Large number conversion
-digitToNepaliWords(1000000000); // "एक अरब"
-digitToNepaliWords(1000000000, { lang: "en" }); // "one arab"
-
-// Using BigInt for very large numbers
-digitToNepaliWords(BigInt("1" + "0".repeat(39))); // "एक अदन्त सिंघर"
-```
