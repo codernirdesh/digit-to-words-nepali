@@ -192,13 +192,31 @@ describe("Nepali Number to Words Converter", () => {
         expect(result).toBe("dollars एक cents पचास");
       });
 
-      it("should truncate to 2 decimal places in currency", () => {
+      it("should round decimal places greater than 2 digits", () => {
         const result = digitToNepaliWords(1.567, {
           isCurrency: true,
           includeDecimal: true,
           lang: "ne"
         });
-        expect(result).toBe("रुपैयाँ एक पैसा छपन्न");
+        expect(result).toBe("रुपैयाँ एक पैसा सन्ताउन्न");
+      });
+
+      it("should round up decimal .999 to next integer", () => {
+        const result = digitToNepaliWords(1.999, {
+          isCurrency: true,
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("रुपैयाँ दुई");
+      });
+
+      it("should pad single decimal digit with zero", () => {
+        const result = digitToNepaliWords(1.5, {
+          isCurrency: true,
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("रुपैयाँ एक पैसा पचास");
       });
     });
 
@@ -208,7 +226,7 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           lang: "ne" 
         });
-        expect(result).toBe("एक दशमलव पाँच");
+        expect(result).toBe("एक दशमलव पचास");
       });
 
       it("should handle zero decimal part", () => {
@@ -232,7 +250,23 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           decimalSuffix: "point"
         });
-        expect(result).toBe("एक point पाँच");
+        expect(result).toBe("एक point पचास");
+      });
+
+      it("should round long decimals to 2 places", () => {
+        const result = digitToNepaliWords(1.237, { 
+          includeDecimal: true,
+          lang: "ne" 
+        });
+        expect(result).toBe("एक दशमलव चौबिस");
+      });
+
+      it("should pad single decimal digit", () => {
+        const result = digitToNepaliWords(1.5, { 
+          includeDecimal: true,
+          lang: "ne" 
+        });
+        expect(result).toBe("एक दशमलव पचास");
       });
     });
   });
