@@ -125,6 +125,40 @@ digitToNepaliWords(1.23, {
 // Output: "one point twenty three"
 ```
 
+### Decimal Handling Rules
+
+The library follows these rules for decimal places:
+
+1. **Rounding**: If there are more than 2 decimal places, the number is rounded to 2 decimal places
+   ```typescript
+   digitToNepaliWords(1.567, { includeDecimal: true })
+   // => "एक दशमलव सन्ताउन्न"  (rounds to 1.57)
+
+   digitToNepaliWords(1.999, { includeDecimal: true })
+   // => "दुई"  (rounds to 2.00)
+   ```
+
+2. **Padding**: Single decimal digits are padded with a zero
+   ```typescript
+   digitToNepaliWords(1.5, { includeDecimal: true })
+   // => "एक दशमलव पचास"  (pads to 1.50)
+   ```
+
+3. **Currency Format**: These rules apply to both regular and currency formats
+   ```typescript
+   digitToNepaliWords(1.567, { 
+     isCurrency: true,
+     includeDecimal: true 
+   })
+   // => "रुपैयाँ एक पैसा सन्ताउन्न"  (rounds to 1.57)
+
+   digitToNepaliWords(1.5, { 
+     isCurrency: true,
+     includeDecimal: true 
+   })
+   // => "रुपैयाँ एक पैसा पचास"  (pads to 1.50)
+   ```
+
 ## Configuration Options
 
 ```typescript

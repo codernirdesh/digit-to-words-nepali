@@ -397,13 +397,27 @@ class NumberConverter {
     integer: bigint;
     decimal?: string;
   } {
-    const str = num.toString();
-    const [intPart, decPart] = str.split(".");
-
     try {
+      // Convert the input to a number first for proper decimal handling
+      const numValue = typeof num === 'bigint' ? Number(num) : Number(num);
+      
+      // Round to 2 decimal places
+      const rounded = Math.round(numValue * 100) / 100;
+      
+      // Convert to string and split
+      const [intPart, decPart] = rounded.toString().split('.');
+      
+      let processedDecimal: string | undefined = decPart;
+      if (processedDecimal) {
+        // Pad single digit with zero
+        if (processedDecimal.length === 1) {
+          processedDecimal = processedDecimal + '0';
+        }
+      }
+  
       return {
         integer: BigInt(intPart),
-        decimal: decPart,
+        decimal: processedDecimal,
       };
     } catch {
       throw new Error("Input must contain only valid digits");
@@ -463,21 +477,13 @@ class NumberConverter {
     );
 
     // Always add zero for whole numbers or undefined decimal
-    if (!decimal || decimal === "0") {
+    if (!decimal || decimal === "0" || decimal === "00") {
       words.push(this.getWordMapping(0, config.lang));
       return;
     }
 
-    let decimalNum: number;
-    if (config.isCurrency) {
-      // For currency: pad to 2 digits, handle .5 as 50, .05 as 5
-      const paddedDecimal = decimal.padEnd(2, "0").slice(0, 2);
-      decimalNum = parseInt(paddedDecimal);
-    } else {
-      // For non-currency: keep original value
-      decimalNum = parseInt(decimal);
-    }
-
+    // For currency or regular decimal, use the processed decimal value
+    const decimalNum = parseInt(decimal);
     words.push(this.getWordMapping(decimalNum, config.lang));
   }
 
