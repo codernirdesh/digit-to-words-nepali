@@ -373,6 +373,41 @@ describe("Nepali Number to Words Converter", () => {
         expect(result).toBe("एक अरब तेइस करोड पैँतालीस लाख सतसट्ठी हजार आठ सय नब्बे");
       });
     });
+
+    describe("Maximum Scale Numbers", () => {
+      it("should handle numbers up to Adanta Singhar (10^39)", () => {
+        const maxNum = BigInt("9".repeat(39));
+        console.log(maxNum);
+        const result = digitToNepaliWords(maxNum);
+        expect(result).toBe(
+          "उनान्सय महासिंघर उनान्सय सिंघर उनान्सय शिशान्त उनान्सय महाअन्त उनान्सय अन्त उनान्सय परार्ध उनान्सय मध उनान्सय जल्द उनान्सय अंक उनान्सय उपाध उनान्सय शंख उनान्सय पद्म उनान्सय नील उनान्सय खरब उनान्सय अरब उनान्सय करोड उनान्सय लाख उनान्सय हजार नौ सय उनान्सय"
+        );
+      });
+
+      it("should handle complex large numbers with mixed scales", () => {
+        const largeNum = BigInt("122212133123121222121213112131213121313");
+        const result = digitToNepaliWords(largeNum);
+        expect(result).toBe(
+          "बाह्र महासिंघर बाइस सिंघर बाह्र शिशान्त तेह्र महाअन्त एकत्तिस अन्त तेइस परार्ध बाह्र मध बाह्र जल्द बाइस अंक बाह्र उपाध बाह्र शंख तेह्र पद्म एघार नील एक्काइस खरब एकत्तिस अरब एक्काइस करोड एकत्तिस लाख एक्काइस हजार तीन सय तेह्र"
+        );
+      });
+
+      it("should handle very large numbers with all scales in English", () => {
+        const largeNum = BigInt("123456789123456789123456789123456789");
+        const result = digitToNepaliWords(largeNum, { lang: "en" });
+        expect(result).toBe(
+          "one singhar twenty three shishant forty five maha ant sixty seven ant eighty nine paraardha twelve madh thirty four jald fifty six ank seventy eight udpadh ninety one shankha twenty three padma forty five neel sixty seven kharab eighty nine arab twelve crore thirty four lakh fifty six thousand seven hundred eighty nine"
+        );
+      });
+
+      it("should handle maximum number in English", () => {
+        const maxNum = BigInt("9".repeat(39));
+        const result = digitToNepaliWords(maxNum, { lang: "en" });
+        expect(result).toBe(
+          "ninety nine maha singhar ninety nine singhar ninety nine shishant ninety nine maha ant ninety nine ant ninety nine paraardha ninety nine madh ninety nine jald ninety nine ank ninety nine udpadh ninety nine shankha ninety nine padma ninety nine neel ninety nine kharab ninety nine arab ninety nine crore ninety nine lakh ninety nine thousand nine hundred ninety nine"
+        );
+      });
+    });
   });
 
   describe("Combined Features", () => {

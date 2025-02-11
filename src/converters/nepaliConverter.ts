@@ -340,24 +340,21 @@ class NumberConverter {
     config: Required<ConverterConfig>
   ): string {
     try {
-      // Check if the input number is valid
+      // Validate input
       if (!this.isValidNumber(num)) {
-        throw new Error("Invalid number input");
+        throw new Error("Input must contain only valid digits");
       }
 
-      // Split the number into its integer and decimal parts
-      const parts = this.splitNumber(num);
+      // Split into integer and decimal parts
+      const { integer, decimal } = this.splitNumber(num);
 
-      // Convert the integer part of the number to words
-      const words = this.convertIntegerPart(parts.integer, config);
+      // Convert integer part
+      const words = this.convertIntegerPart(integer, config);
 
-      // If the config includes decimal parts and the decimal part exists,
-      // append it to the words
-      if (config.includeDecimal && parts.decimal !== undefined) {
-        this.appendDecimalPart(words, parts.decimal, config);
-      }
+      // Append decimal part if needed
+      this.appendDecimalPart(words, decimal, config);
 
-      // Format the final result according to the config
+      // Format and return result
       return this.formatResult(words, config);
     } catch (error) {
       console.error("Error converting number to words:", error);
@@ -367,29 +364,42 @@ class NumberConverter {
 
   private isValidNumber(num: number | string | bigint): boolean {
     try {
-      // Handle NaN and Infinity first
-      if (typeof num === "number" && (isNaN(num) || !isFinite(num))) {
-        throw new Error("Input must contain only valid digits");
+      // Handle BigInt directly
+      if (typeof num === 'bigint') {
+        return num >= 0n;
       }
 
+      // For string/number inputs
       const str = num.toString();
-
+      
       // Check for negative numbers
-      if (str.startsWith("-")) {
-        throw new Error("Input must contain only valid digits");
+      if (str.startsWith('-')) {
+        return false;
       }
 
-      // Simple validation: only allow digits and one optional decimal point
-      if (!/^\d+(\.\d+)?$/.test(str)) {
-        throw new Error("Input must contain only valid digits");
+      // Allow decimal point and digits only
+      if (!/^\d*\.?\d+$/.test(str)) {
+        return false;
+      }
+
+      // Parse the number to check if it's valid
+      const [intPart, decPart] = str.split('.');
+      
+      // Validate integer part
+      try {
+        BigInt(intPart);
+      } catch {
+        return false;
+      }
+
+      // Validate decimal part if exists
+      if (decPart && !/^\d+$/.test(decPart)) {
+        return false;
       }
 
       return true;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Input must contain only valid digits");
+    } catch {
+      return false;
     }
   }
 
@@ -398,27 +408,47 @@ class NumberConverter {
     decimal?: string;
   } {
     try {
-      // Convert the input to a number first for proper decimal handling
-      const numValue = typeof num === 'bigint' ? Number(num) : Number(num);
-      
-      // Round to 2 decimal places
-      const rounded = Math.round(numValue * 100) / 100;
-      
-      // Convert to string and split
-      const [intPart, decPart] = rounded.toString().split('.');
-      
-      let processedDecimal: string | undefined = decPart;
-      if (processedDecimal) {
-        // Pad single digit with zero
-        if (processedDecimal.length === 1) {
-          processedDecimal = processedDecimal + '0';
-        }
+      // Handle BigInt directly
+      if (typeof num === 'bigint') {
+        return {
+          integer: num,
+          decimal: undefined
+        };
       }
-  
-      return {
-        integer: BigInt(intPart),
-        decimal: processedDecimal,
-      };
+
+      // Convert the input to string for processing
+      const str = num.toString();
+      const [intPart, decPart] = str.split('.');
+      
+      try {
+        let integer = BigInt(intPart);
+        
+        let processedDecimal: string | undefined = decPart;
+        if (processedDecimal) {
+          // Convert to number for rounding
+          const decimalNum = Number(`0.${processedDecimal}`);
+          // Round to 2 decimal places
+          const roundedDecimal = Math.round(decimalNum * 100);
+          
+          if (roundedDecimal === 100) {
+            // Handle case where rounding results in 1.00
+            return {
+              integer: integer + 1n,
+              decimal: undefined // Don't include decimal part when rounding up
+            };
+          }
+          
+          // Convert back to string, pad with leading zero if needed
+          processedDecimal = roundedDecimal.toString().padStart(2, '0');
+        }
+
+        return {
+          integer,
+          decimal: processedDecimal,
+        };
+      } catch {
+        throw new Error("Input must contain only valid digits");
+      }
     } catch {
       throw new Error("Input must contain only valid digits");
     }
@@ -432,31 +462,28 @@ class NumberConverter {
       return [this.getWordMapping(0, config.lang)];
     }
 
-    if (num <= 99n) {
-      return [this.getWordMapping(Number(num), config.lang)];
-    }
-
     const words: string[] = [];
     let remaining = num;
 
+    // Process each scale from largest to smallest
     for (const scale of NUMBER_SCALES) {
-      const scaleValue = BigInt(scale.value);
-      if (remaining < scaleValue) continue;
+      if (remaining < scale.value) continue;
 
-      const quotient = remaining / scaleValue;
-      remaining = remaining % scaleValue;
+      const quotient = remaining / scale.value;
+      remaining = remaining % scale.value;
 
       if (quotient > 0n) {
-        const quotientWords = this.convertToWords(Number(quotient), {
+        // Convert quotient recursively for proper word formation
+        const quotientWords = this.convertToWords(quotient.toString(), {
           ...config,
           isCurrency: false,
           includeDecimal: false,
         });
-        // Use correct language for scale names
         words.push(`${quotientWords} ${scale.names[config.lang]}`);
       }
     }
 
+    // Handle remaining digits
     if (remaining > 0n) {
       words.push(this.getWordMapping(Number(remaining), config.lang));
     }
@@ -469,20 +496,18 @@ class NumberConverter {
     decimal: string | undefined,
     config: Required<ConverterConfig>
   ): void {
-    if (!config.includeDecimal) return;
+    // Don't append decimal part if:
+    // 1. Decimal handling is disabled
+    // 2. No decimal part exists
+    // 3. Decimal was rounded up to next integer
+    if (!config.includeDecimal || !decimal) return;
 
-    // Always add decimal suffix
+    // Add decimal suffix
     words.push(
       config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix
     );
 
-    // Always add zero for whole numbers or undefined decimal
-    if (!decimal || decimal === "0" || decimal === "00") {
-      words.push(this.getWordMapping(0, config.lang));
-      return;
-    }
-
-    // For currency or regular decimal, use the processed decimal value
+    // Convert decimal part
     const decimalNum = parseInt(decimal);
     words.push(this.getWordMapping(decimalNum, config.lang));
   }
@@ -507,6 +532,16 @@ class NumberConverter {
   }
 }
 
+// Update the default config
+const DEFAULT_CONFIG: Required<ConverterConfig> = {
+  lang: "ne",
+  isCurrency: false,
+  currency: "रुपैयाँ",
+  currencyDecimalSuffix: "पैसा",
+  includeDecimal: true, // Changed from false to true
+  decimalSuffix: "दशमलव"
+};
+
 /**
  * Converts numbers to their word representation in Nepali or English.
  * Supports numbers up to Adanta Singhar (10^39) with extensive formatting options.
@@ -519,10 +554,10 @@ class NumberConverter {
  * @param config - Optional configuration object
  * @param config.lang - Output language ("ne" | "en"), defaults to "ne"
  * @param config.isCurrency - Format as currency, defaults to false
- * @param config.includeDecimal - Include decimal part, defaults to false
- * @param config.currency - Custom currency text
- * @param config.decimalSuffix - Custom decimal suffix
- * @param config.currencyDecimalSuffix - Custom currency decimal suffix
+ * @param config.includeDecimal - Include decimal part, defaults to true
+ * @param config.currency - Custom currency text, defaults to "रुपैयाँ"
+ * @param config.decimalSuffix - Custom decimal suffix, defaults to "दशमलव"
+ * @param config.currencyDecimalSuffix - Custom currency decimal suffix, defaults to "पैसा"
  * 
  * @returns The number in words
  * @throws Error if input is invalid (negative, NaN, Infinity, or non-numeric)
@@ -537,16 +572,12 @@ class NumberConverter {
  * // => "one thousand two hundred thirty four"
  * 
  * // Currency formatting
- * digitToNepaliWords(1234.50, { 
- *   isCurrency: true,
- *   includeDecimal: true 
- * })
+ * digitToNepaliWords(1234.50, { isCurrency: true })
  * // => "रुपैयाँ एक हजार दुई सय चौँतिस पैसा पचास"
  * 
  * // Custom currency
  * digitToNepaliWords(1234.05, {
  *   isCurrency: true,
- *   includeDecimal: true,
  *   currency: "डलर",
  *   currencyDecimalSuffix: "सेन्ट"
  * })
@@ -556,34 +587,29 @@ class NumberConverter {
  * digitToNepaliWords(BigInt("123456789012345"))
  * // => "एक करोड तेइस लाख पैँतालीस हजार छ सय सतासी..."
  * 
- * // Decimal handling
- * digitToNepaliWords(1.23, { includeDecimal: true })
+ * // Decimal handling (enabled by default)
+ * digitToNepaliWords(1.23)
  * // => "एक दशमलव तेइस"
  * 
+ * // Disable decimal handling
+ * digitToNepaliWords(1.23, { includeDecimal: false })
+ * // => "एक"
+ * 
  * // Custom decimal suffix
- * digitToNepaliWords(1.23, {
- *   includeDecimal: true,
- *   decimalSuffix: "point"
- * })
+ * digitToNepaliWords(1.23, { decimalSuffix: "point" })
  * // => "एक point तेइस"
  */
-export const digitToNepaliWords = (
+export function digitToNepaliWords(
   num: number | string | bigint,
-  config: ConverterConfig = {}
-): string => {
-  const defaultConfig = LANGUAGE_CONFIGS[config.lang ?? "ne"];
-  const mergedConfig: Required<ConverterConfig> = {
-    ...defaultConfig,
+  config: Partial<ConverterConfig> = {}
+): string {
+  // Merge with defaults, keeping includeDecimal true by default
+  const fullConfig: Required<ConverterConfig> = {
+    ...DEFAULT_CONFIG,
     ...config,
-    isCurrency: config.isCurrency ?? false,
-    includeDecimal: config.includeDecimal ?? false,
-    lang: config.lang ?? "ne",
-    // Ensure proper inheritance of decimal suffixes
-    decimalSuffix: config.decimalSuffix ?? defaultConfig.decimalSuffix,
-    currencyDecimalSuffix:
-      config.currencyDecimalSuffix ?? defaultConfig.currencyDecimalSuffix,
-    currency: config.currency ?? defaultConfig.currency,
+    includeDecimal: config.includeDecimal ?? true // Explicitly set default to true
   };
 
-  return NumberConverter.getInstance().convertToWords(num, mergedConfig);
-};
+  const converter = NumberConverter.getInstance();
+  return converter.convertToWords(num, fullConfig);
+}
