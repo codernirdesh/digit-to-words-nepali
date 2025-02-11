@@ -165,7 +165,7 @@ The library follows these rules for decimal places:
 interface ConverterConfig {
   lang?: "en" | "ne";           // Output language (default: "ne")
   isCurrency?: boolean;         // Format as currency (default: false)
-  includeDecimal?: boolean;     // Include decimal part (default: false)
+  includeDecimal?: boolean;     // Include decimal part (default: true)
   currency?: string;            // Custom currency text
   decimalSuffix?: string;       // Custom decimal suffix
   currencyDecimalSuffix?: string; // Custom currency decimal suffix
@@ -228,23 +228,6 @@ try {
 }
 ```
 
-## License
-
-MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please check our contributing guidelines.
-
-<a href="https://github.com/codernirdesh/digit-to-words-nepali/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=codernirdesh/digit-to-words-nepali" />
-</a>
-
-
-## Support
-
-For issues and questions, please [open an issue](https://github.com/codernirdesh/digit-to-words-nepali/issues).
-
 ## Number Scale Support
 
 The library supports numbers up to Adanta Singhar (10^39). Here's the complete scale:
@@ -271,3 +254,19 @@ The library supports numbers up to Adanta Singhar (10^39). Here's the complete s
 | 10^35 | singhar        | सिंघर       | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000       |
 | 10^37 | maha singhar   | महासिंघर    | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000    |
 | 10^39 | adanta singhar | अदन्त सिंघर | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000 |
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+Contributions welcome! Please check our contributing guidelines.
+
+<a href="https://github.com/codernirdesh/digit-to-words-nepali/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=codernirdesh/digit-to-words-nepali" />
+</a>
+
+## Support
+
+For issues and questions, please [open an issue](https://github.com/codernirdesh/digit-to-words-nepali/issues).
