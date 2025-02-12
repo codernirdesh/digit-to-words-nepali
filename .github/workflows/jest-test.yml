@@ -28,9 +28,10 @@ jobs:
       - name: Run Jest tests
         id: test
         run: |
-          RESULTS=$(npm test 2>&1 || true)
+          TEST_OUTPUT=$(npm test 2>&1) || STATUS=$?
+          echo "status=${STATUS:-0}" >> $GITHUB_OUTPUT
           echo "result<<EOF" >> $GITHUB_OUTPUT
-          echo "$RESULTS" >> $GITHUB_OUTPUT
+          echo "$TEST_OUTPUT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Comment PR
@@ -40,7 +41,24 @@ jobs:
           github-token: ${{ secrets.PAT_GITHUB_TOKEN }}
           script: |
             const testOutput = process.env.TEST_OUTPUT;
-            const body = `### Test Results (Automated From Github Actions) \n\`\`\`\n${testOutput}\n\`\`\``;
+            const status = process.env.STATUS || '0';
+            
+            // Extract test summary
+            const summaryMatch = testOutput.match(/PASS|FAIL.*?(?=\n|$)/);
+            const summary = summaryMatch ? summaryMatch[0] : 'Test completed';
+            
+            const body = `### Test Results (Automated From Github Actions)
+                        
+            **Status**: ${summary} ${status === '0' ? '✅' : '❌'}
+
+            <details>
+            <summary>Test Output</summary>
+
+            \`\`\`
+            ${testOutput}
+            \`\`\`
+            </details>`;
+                        
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -49,3 +67,4 @@ jobs:
             });
         env:
           TEST_OUTPUT: ${{ steps.test.outputs.result }}
+          STATUS: ${{ steps.test.outputs.status }}
