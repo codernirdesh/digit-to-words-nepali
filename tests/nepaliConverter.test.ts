@@ -377,7 +377,6 @@ describe("Nepali Number to Words Converter", () => {
     describe("Maximum Scale Numbers", () => {
       it("should handle numbers up to Adanta Singhar (10^39)", () => {
         const maxNum = BigInt("9".repeat(39));
-        console.log(maxNum);
         const result = digitToNepaliWords(maxNum);
         expect(result).toBe(
           "उनान्सय महासिंघर उनान्सय सिंघर उनान्सय शिशान्त उनान्सय महाअन्त उनान्सय अन्त उनान्सय परार्ध उनान्सय मध उनान्सय जल्द उनान्सय अंक उनान्सय उपाध उनान्सय शंख उनान्सय पद्म उनान्सय नील उनान्सय खरब उनान्सय अरब उनान्सय करोड उनान्सय लाख उनान्सय हजार नौ सय उनान्सय"
