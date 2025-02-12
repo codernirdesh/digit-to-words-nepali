@@ -161,6 +161,7 @@ The library follows these rules for decimal places:
 
 ## Configuration Options
 
+### Basic Configuration
 ```typescript
 interface ConverterConfig {
   lang?: "en" | "ne";           // Output language (default: "ne")
@@ -169,7 +170,28 @@ interface ConverterConfig {
   currency?: string;            // Custom currency text
   decimalSuffix?: string;       // Custom decimal suffix
   currencyDecimalSuffix?: string; // Custom currency decimal suffix
+  units?: Record<number, CustomMapping>;    // Custom number words
+  scales?: Record<number, CustomMapping>;   // Custom scale words
 }
+
+// CustomMapping type for language-specific text
+type CustomMapping = {
+  en: string;  // English text
+  ne: string;  // Nepali text
+};
+```
+
+### Custom Mappings Example
+```typescript
+digitToNepaliWords(1234, {
+  units: {
+    1: { ne: "एक्का", en: "ekka" },
+    2: { ne: "दुक्का", en: "dukka" }
+  },
+  scales: {
+    1000: { ne: "हज्जार", en: "hazzar" }
+  }
+});
 ```
 
 ### Default Values
