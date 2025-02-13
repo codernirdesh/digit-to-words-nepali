@@ -3,7 +3,7 @@ import { digitToNepaliWords } from "../src/converters/nepaliConverter";
 describe("Nepali Number to Words Converter", () => {
   describe("Single digits (0-9)", () => {
     const singleDigitCases: [number, string][] = [
-      [0, "शुन्य"],
+      [0, "शून्य"],
       [1, "एक"],
       [2, "दुई"],
       [3, "तीन"],
@@ -134,7 +134,7 @@ describe("Nepali Number to Words Converter", () => {
 
       it("should handle zero amount with currency", () => {
         const result = digitToNepaliWords(0, { isCurrency: true });
-        expect(result).toBe("रुपैयाँ शुन्य");
+        expect(result).toBe("रुपैयाँ शून्य");
       });
 
       it("should handle large amounts with currency", () => {

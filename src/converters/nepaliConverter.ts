@@ -1,6 +1,6 @@
 // Map of numbers 0-99 to their English and Nepali word representations
 const unitsNepali: Record<number, [string, string]> = {
-  0: ["zero", "शुन्य"],
+  0: ["zero", "शून्य"],
   1: ["one", "एक"],
   2: ["two", "दुई"],
   3: ["three", "तीन"],
