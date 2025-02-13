@@ -77,7 +77,7 @@ digitToNepaliWords(BigInt("1" + "0".repeat(15)));
 
 // Massive number (123 Shankha 456 Padma 789 Neel)
 digitToNepaliWords(BigInt("123456789" + "0".repeat(15)));
-// Output: "एक सय तेइस शंख चार सय छपन्न पद्म सात सय उनान्नब्बे नील"
+// Output: "एक जल्द तेइस अंक पैँतालीस उपाध सतसट्ठी शंख उनान्नब्बे पद्म"
 
 // Maximum supported (1 Adanta Singhar)
 digitToNepaliWords(BigInt("1" + "0".repeat(39)));
