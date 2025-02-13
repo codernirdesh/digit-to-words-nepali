@@ -3,7 +3,7 @@ import { digitToNepaliWords } from "../src/converters/nepaliConverter";
 describe("Nepali Number to Words Converter", () => {
   describe("Single digits (0-9)", () => {
     const singleDigitCases: [number, string][] = [
-      [0, "सुन्ना"],
+      [0, "शून्य"],
       [1, "एक"],
       [2, "दुई"],
       [3, "तीन"],
@@ -134,7 +134,7 @@ describe("Nepali Number to Words Converter", () => {
 
       it("should handle zero amount with currency", () => {
         const result = digitToNepaliWords(0, { isCurrency: true });
-        expect(result).toBe("रुपैयाँ सुन्ना");
+        expect(result).toBe("रुपैयाँ शून्य");
       });
 
       it("should handle large amounts with currency", () => {
@@ -222,25 +222,25 @@ describe("Nepali Number to Words Converter", () => {
 
     describe("Non-Currency Decimals", () => {
       it("should handle simple decimal numbers", () => {
-        const result = digitToNepaliWords(1.5, { 
+        const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
-          lang: "ne" 
+          lang: "ne"
         });
         expect(result).toBe("एक दशमलव पचास");
       });
 
       it("should handle zero decimal part", () => {
-        const result = digitToNepaliWords(1.0, { 
+        const result = digitToNepaliWords(1.0, {
           includeDecimal: true,
-          lang: "ne" 
+          lang: "ne"
         });
         expect(result).toBe("एक");
       });
 
       it("should handle multiple decimal places", () => {
-        const result = digitToNepaliWords(1.23, { 
+        const result = digitToNepaliWords(1.23, {
           includeDecimal: true,
-          lang: "ne" 
+          lang: "ne"
         });
         expect(result).toBe("एक दशमलव तेइस");
       });
@@ -254,17 +254,17 @@ describe("Nepali Number to Words Converter", () => {
       });
 
       it("should round long decimals to 2 places", () => {
-        const result = digitToNepaliWords(1.237, { 
+        const result = digitToNepaliWords(1.237, {
           includeDecimal: true,
-          lang: "ne" 
+          lang: "ne"
         });
         expect(result).toBe("एक दशमलव चौबिस");
       });
 
       it("should pad single decimal digit", () => {
-        const result = digitToNepaliWords(1.5, { 
+        const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
-          lang: "ne" 
+          lang: "ne"
         });
         expect(result).toBe("एक दशमलव पचास");
       });
@@ -326,8 +326,8 @@ describe("Nepali Number to Words Converter", () => {
     });
 
     it("should handle currency in English", () => {
-      const result = digitToNepaliWords(1.5, { 
-        lang: "en", 
+      const result = digitToNepaliWords(1.5, {
+        lang: "en",
         isCurrency: true,
         includeDecimal: true,
         currency: "dollars",
