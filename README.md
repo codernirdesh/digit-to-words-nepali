@@ -36,7 +36,7 @@ digitToNepaliWords(1234, { lang: "en" });
 
 // Zero
 digitToNepaliWords(0);
-// Output: "सुन्ना"
+// Output: "शुन्य"
 ```
 
 ### Currency Formatting

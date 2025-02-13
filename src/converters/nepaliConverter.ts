@@ -1,6 +1,6 @@
 // Map of numbers 0-99 to their English and Nepali word representations
 const unitsNepali: Record<number, [string, string]> = {
-  0: ["zero", "सुन्ना"],
+  0: ["zero", "शुन्य"],
   1: ["one", "एक"],
   2: ["two", "दुई"],
   3: ["three", "तीन"],
@@ -371,7 +371,7 @@ class NumberConverter {
 
       // For string/number inputs
       const str = num.toString();
-      
+
       // Check for negative numbers
       if (str.startsWith('-')) {
         return false;
@@ -384,7 +384,7 @@ class NumberConverter {
 
       // Parse the number to check if it's valid
       const [intPart, decPart] = str.split('.');
-      
+
       // Validate integer part
       try {
         BigInt(intPart);
@@ -419,17 +419,17 @@ class NumberConverter {
       // Convert the input to string for processing
       const str = num.toString();
       const [intPart, decPart] = str.split('.');
-      
+
       try {
         let integer = BigInt(intPart);
-        
+
         let processedDecimal: string | undefined = decPart;
         if (processedDecimal) {
           // Convert to number for rounding
           const decimalNum = Number(`0.${processedDecimal}`);
           // Round to 2 decimal places
           const roundedDecimal = Math.round(decimalNum * 100);
-          
+
           if (roundedDecimal === 100) {
             // Handle case where rounding results in 1.00
             return {
@@ -437,7 +437,7 @@ class NumberConverter {
               decimal: undefined // Don't include decimal part when rounding up
             };
           }
-          
+
           // Convert back to string, pad with leading zero if needed
           processedDecimal = roundedDecimal.toString().padStart(2, '0');
         }
