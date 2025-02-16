@@ -22,7 +22,7 @@
     "number-converter"
   ],
   "author": "Nirdesh Pokharel <mail@nirdeshpokhrel.com.np>",
-  "license": "MIT",
+  "license": "BSD 3-Clause",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codernirdesh/digit-to-words-nepali.git"

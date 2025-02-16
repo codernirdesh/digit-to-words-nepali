@@ -257,7 +257,7 @@ The library supports numbers up to Adanta Singhar (10^39). Here's the complete s
 
 ## License
 
-MIT License - see LICENSE file for details.
+BSD 3-Clause License - see LICENSE file for details.
 
 ## Contributing
 
