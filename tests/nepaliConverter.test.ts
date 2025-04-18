@@ -269,6 +269,39 @@ describe("Nepali Number to Words Converter", () => {
         expect(result).toBe("एक दशमलव पचास");
       });
     });
+
+    describe("Rounding and Zero Edge Cases", () => {
+      it("should handle 0.00 input", () => {
+        expect(digitToNepaliWords(0.00, { includeDecimal: true })).toBe("शून्य");
+      });
+      it("should handle 0.0 input", () => {
+        expect(digitToNepaliWords(0.0, { includeDecimal: true })).toBe("शून्य");
+      });
+      it("should handle string '0.00' input", () => {
+        expect(digitToNepaliWords("0.00", { includeDecimal: true })).toBe("शून्य");
+      });
+      it("should handle rounding down near zero (0.001)", () => {
+        expect(digitToNepaliWords(0.001, { includeDecimal: true })).toBe("शून्य");
+      });
+      it("should handle rounding up near zero (0.009)", () => {
+        expect(digitToNepaliWords(0.009, { includeDecimal: true })).toBe("शून्य दशमलव एक");
+      });
+      it("should handle rounding up to next integer (1.999)", () => {
+        expect(digitToNepaliWords(1.999, { includeDecimal: true })).toBe("दुई");
+      });
+      it("should handle rounding down slightly above integer (1.001)", () => {
+        expect(digitToNepaliWords(1.001, { includeDecimal: true })).toBe("एक");
+      });
+      it("should handle currency rounding up to next integer (1.999)", () => {
+        expect(digitToNepaliWords(1.999, { isCurrency: true, includeDecimal: true })).toBe("रुपैयाँ दुई");
+      });
+      it("should handle currency rounding down near zero (0.001)", () => {
+        expect(digitToNepaliWords(0.001, { isCurrency: true, includeDecimal: true })).toBe("रुपैयाँ शून्य");
+      });
+      it("should handle currency rounding up near zero (0.009)", () => {
+        expect(digitToNepaliWords(0.009, { isCurrency: true, includeDecimal: true })).toBe("रुपैयाँ शून्य पैसा एक");
+      });
+    });
   });
 
   describe("Error Handling", () => {
@@ -306,6 +339,14 @@ describe("Nepali Number to Words Converter", () => {
       expect(() => digitToNepaliWords(Infinity)).toThrow(
         "Input must contain only valid digits"
       );
+    });
+
+    it("should handle the absolute maximum supported number (10^39 - 1)", () => {
+      const maxNum = BigInt("9".repeat(39));
+      const result = digitToNepaliWords(maxNum);
+      expect(typeof result).toBe("string");
+      expect(result.startsWith("उनान्सय महासिंघर")).toBe(true);
+      expect(result.endsWith("उनान्सय")).toBe(true);
     });
   });
 
@@ -438,6 +479,129 @@ describe("Nepali Number to Words Converter", () => {
         decimalSuffix: "point"
       });
       expect(result).toBe("one thousand two hundred thirty four point fifty six");
+    });
+  });
+
+  describe("Extreme and Edge Cases", () => {
+    it("should handle the absolute maximum supported number (10^39 - 1)", () => {
+      const maxNum = BigInt("9".repeat(39));
+      const result = digitToNepaliWords(maxNum);
+      expect(typeof result).toBe("string");
+      expect(result.startsWith("उनान्सय महासिंघर")).toBe(true);
+      expect(result.endsWith("उनान्सय")).toBe(true);
+    });
+
+    it("should throw for numbers larger than 10^39", () => {
+      const tooBig = BigInt("1" + "0".repeat(40));
+      expect(() => digitToNepaliWords(tooBig)).toThrow();
+    });
+
+    it("should handle custom units and scales overriding all defaults", () => {
+      const custom = digitToNepaliWords(123456, {
+        units: {
+          1: { ne: "एक्क", en: "ekk" },
+          2: { ne: "दुक्क", en: "dukk" },
+          3: { ne: "तीक्क", en: "teekk" },
+          56: { ne: "छप्पन्न", en: "chappan" }
+        },
+        scales: {
+          100: { ne: "सय्य", en: "saiyy" },
+          1000: { ne: "हज्जार", en: "hajjar" },
+          100000: { ne: "लाख्क", en: "lakhk" }
+        }
+      });
+      expect(custom).toContain("लाख्क");
+      expect(custom).toContain("हज्जार");
+      expect(custom).toContain("छप्पन्न");
+    });
+
+    it("should throw for empty string input", () => {
+      expect(() => digitToNepaliWords("")).toThrow();
+    });
+
+    it("should throw for whitespace string input", () => {
+      expect(() => digitToNepaliWords("   ")).toThrow();
+    });
+
+    it("should throw for mixed type input (object)", () => {
+      // @ts-expect-error
+      expect(() => digitToNepaliWords({})).toThrow();
+    });
+
+    it("should handle stringified BigInt input", () => {
+      const result = digitToNepaliWords("10000000000000000000000000000000000000");
+      expect(result).toContain("एक महासिंघर");
+    });
+
+    it("should handle decimal input as string", () => {
+      const result = digitToNepaliWords("123.45", { includeDecimal: true });
+      expect(result).toContain("दशमलव");
+    });
+
+    it("should handle currency with empty decimal suffix", () => {
+      const result = digitToNepaliWords(123.45, {
+        isCurrency: true,
+        includeDecimal: true,
+        currencyDecimalSuffix: ""
+      });
+      expect(result).toBe("रुपैयाँ एक सय तेइस पैँतालीस");
+      expect(result).not.toContain(" पैसा ");
+    });
+
+    it("should handle non-currency with empty decimal suffix", () => {
+      const result = digitToNepaliWords(123.45, {
+        includeDecimal: true,
+        decimalSuffix: ""
+      });
+      expect(result).toBe("एक सय तेइस पैँतालीस");
+      expect(result).not.toContain(" दशमलव ");
+    });
+
+    it("should handle currency with empty currency prefix", () => {
+      const result = digitToNepaliWords(123.45, {
+        isCurrency: true,
+        includeDecimal: true,
+        currency: ""
+      });
+      expect(result).toBe("एक सय तेइस पैसा पैँतालीस");
+      expect(result).not.toContain("रुपैयाँ ");
+    });
+
+    it("should handle zero correctly even with empty currency prefix", () => {
+      const result = digitToNepaliWords(0, {
+        isCurrency: true,
+        currency: ""
+      });
+      expect(result).toBe("शून्य");
+    });
+
+    it("should handle zero decimal correctly with empty suffixes", () => {
+      expect(digitToNepaliWords(123.00, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस");
+      expect(digitToNepaliWords(123.001, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस");
+      expect(digitToNepaliWords(123.009, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस एक");
+    });
+
+    it("should throw for negative BigInt", () => {
+      expect(() => digitToNepaliWords(BigInt(-1))).toThrow();
+    });
+
+    it("should throw for numbers with leading zeros in string", () => {
+      expect(() => digitToNepaliWords("0000123")).not.toThrow();
+      expect(digitToNepaliWords("0000123")).toBe(digitToNepaliWords(123));
+    });
+
+    it("should throw for invalid Nepali unicode digits in unicodeToEnglishNumber", () => {
+      const { unicodeToEnglishNumber } = require("../src/utils/numberUtils");
+      expect(() => unicodeToEnglishNumber("१२३x")).toThrow();
+      expect(() => unicodeToEnglishNumber("")).toThrow();
+      expect(() => unicodeToEnglishNumber("१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०")).toThrow();
+    });
+
+    it("should throw for numbers with more than 39 digits (ignoring leading zeros)", () => {
+      expect(() => digitToNepaliWords("1".repeat(40))).toThrow("Input exceeds maximum supported value");
+      expect(() => digitToNepaliWords("0".repeat(10) + "1".repeat(39))).not.toThrow();
+      expect(() => digitToNepaliWords("0".repeat(5) + "2".repeat(40))).toThrow("Input exceeds maximum supported value");
+      expect(() => digitToNepaliWords(BigInt("1".repeat(40)))).toThrow("Input exceeds maximum supported value");
     });
   });
 });
