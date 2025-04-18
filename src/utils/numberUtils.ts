@@ -6,14 +6,19 @@ export const digitMap = {
 type EnglishDigit = keyof typeof digitMap;
 type NepaliDigit = typeof digitMap[EnglishDigit];
 
-const nepaliToEnglishDigitMap = Object.fromEntries(
+// Reverse mapping for Nepali to English digits
+const nepaliToEnglishDigitMap: Record<NepaliDigit, EnglishDigit> = Object.fromEntries(
   Object.entries(digitMap).map(([en, ne]) => [ne, en])
 ) as Record<NepaliDigit, EnglishDigit>;
 
+/**
+ * Converts a string of Nepali unicode digits (०-९) to a JavaScript number.
+ * Throws if input is not a valid Nepali digit string or exceeds safe integer.
+ */
 export const unicodeToEnglishNumber = (numStr: string): number => {
   const DIGIT_REGEX_NEPALI = /^[०-९]+$/;
 
-  if (!numStr || typeof numStr !== "string") {
+  if (typeof numStr !== "string" || numStr.length === 0) {
     throw new Error("Input must be a non-empty string");
   }
 
@@ -21,10 +26,14 @@ export const unicodeToEnglishNumber = (numStr: string): number => {
     throw new Error("Input must contain only Nepali digits (०-९)");
   }
 
-  const englishStr = numStr
-    .split("")
-    .map((char) => nepaliToEnglishDigitMap[char as NepaliDigit])
-    .join("");
+  let englishStr = "";
+  for (const char of numStr) {
+    const en = nepaliToEnglishDigitMap[char as NepaliDigit];
+    if (en === undefined) {
+      throw new Error(`Invalid Nepali digit: ${char}`);
+    }
+    englishStr += en;
+  }
 
   const num = Number(englishStr);
 
@@ -34,43 +43,3 @@ export const unicodeToEnglishNumber = (numStr: string): number => {
 
   return num;
 };
-
-export function splitNumber(num: number | string | bigint): {
-  integer: bigint;
-  decimal?: string;
-} {
-  try {
-    if (typeof num === 'bigint') {
-      return { integer: num };
-    }
-
-    const str = num.toString();
-    const [intPart, decPart] = str.split('.');
-
-    const integer = BigInt(intPart);
-    let decimal = decPart;
-
-    if (decimal) {
-      // Round to 2 decimal places
-      decimal = decimal.slice(0, 2).padEnd(2, '0');
-      // Remove leading zeros
-      decimal = String(parseInt(decimal));
-    }
-
-    return {
-      integer,
-      decimal
-    };
-  } catch {
-    throw new Error('Invalid number format');
-  }
-}
-
-export function validateNumber(num: number | string | bigint): boolean {
-  if (typeof num === 'bigint') {
-    return num >= 0n;
-  }
-
-  const str = num.toString();
-  return /^[0-9]+(\.[0-9]+)?$/.test(str) && !str.startsWith('-');
-}

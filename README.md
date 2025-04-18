@@ -5,10 +5,10 @@ A TypeScript library to convert numbers into their word representations in Engli
 ## Features
 
 - Convert numbers to words in English and Nepali languages
-- Support for numbers up to 10^39 (Adanta Singhar)
+- Support for numbers up to `999...9` (39 nines), effectively `10^39 - 1`. Throws error for larger numbers or inputs with more than 39 digits (ignoring leading zeros).
 - Native BigInt support for large numbers
 - Currency formatting with custom currency names
-- Decimal number handling with configurable formats
+- Decimal number handling with configurable formats and refined rounding/zero logic
 - Language-specific defaults
 - Zero external dependencies
 - Strict input validation
@@ -75,13 +75,17 @@ digitToNepaliWords(BigInt("1234567890000"));
 digitToNepaliWords(BigInt("1" + "0".repeat(15)));
 // Output: "एक पद्म"
 
-// Massive number (123 Shankha 456 Padma 789 Neel)
-digitToNepaliWords(BigInt("123456789" + "0".repeat(15)));
-// Output: "एक जल्द तेइस अंक पैँतालीस उपाध सतसट्ठी शंख उनान्नब्बे पद्म"
+// Maximum supported number (39 nines)
+const maxSupported = BigInt("9".repeat(39));
+digitToNepaliWords(maxSupported);
+// Output: "उनान्सय महासिंघर उनान्सय सिंघर ... नौ सय उनान्सय"
 
-// Maximum supported (1 Adanta Singhar)
-digitToNepaliWords(BigInt("1" + "0".repeat(39)));
-// Output: "एक अदन्त सिंघर"
+// Numbers larger than 10^39 - 1 will throw an error
+try {
+  digitToNepaliWords(BigInt("1" + "0".repeat(39))); // 1 followed by 39 zeros
+} catch (e) {
+  console.error(e.message); // Output: Input exceeds maximum supported value (10^39 - 1)
+}
 
 // Complex large number with English output
 digitToNepaliWords(BigInt("987654321987654321"), { lang: "en" });
@@ -129,35 +133,53 @@ digitToNepaliWords(1.23, {
 
 The library follows these rules for decimal places:
 
-1. **Rounding**: If there are more than 2 decimal places, the number is rounded to 2 decimal places
-   ```typescript
-   digitToNepaliWords(1.567, { includeDecimal: true })
-   // => "एक दशमलव सन्ताउन्न"  (rounds to 1.57)
+1.  **Rounding**: If there are more than 2 decimal places, the number is rounded to 2 decimal places using standard rounding rules (>= .005 rounds up).
+    ```typescript
+    digitToNepaliWords(1.567, { includeDecimal: true })
+    // => "एक दशमलव सन्ताउन्न"  (rounds to 1.57)
 
-   digitToNepaliWords(1.999, { includeDecimal: true })
-   // => "दुई"  (rounds to 2.00)
-   ```
+    digitToNepaliWords(1.999, { includeDecimal: true })
+    // => "दुई"  (rounds to 2.00)
 
-2. **Padding**: Single decimal digits are padded with a zero
-   ```typescript
-   digitToNepaliWords(1.5, { includeDecimal: true })
-   // => "एक दशमलव पचास"  (pads to 1.50)
-   ```
+    digitToNepaliWords(0.009, { includeDecimal: true })
+    // => "शून्य दशमलव एक" (rounds to 0.01)
 
-3. **Currency Format**: These rules apply to both regular and currency formats
-   ```typescript
-   digitToNepaliWords(1.567, { 
-     isCurrency: true,
-     includeDecimal: true 
-   })
-   // => "रुपैयाँ एक पैसा सन्ताउन्न"  (rounds to 1.57)
+    digitToNepaliWords(0.001, { includeDecimal: true })
+    // => "शून्य" (rounds to 0.00)
+    ```
 
-   digitToNepaliWords(1.5, { 
-     isCurrency: true,
-     includeDecimal: true 
-   })
-   // => "रुपैयाँ एक पैसा पचास"  (pads to 1.50)
-   ```
+2.  **Padding**: Single decimal digits are padded with a zero *after* rounding.
+    ```typescript
+    digitToNepaliWords(1.5, { includeDecimal: true })
+    // => "एक दशमलव पचास"  (pads to 1.50)
+    ```
+
+3.  **Zero Decimals**: If the decimal part becomes `00` after rounding, it is omitted from the output unless the integer part is also zero.
+    ```typescript
+    digitToNepaliWords(1.001, { includeDecimal: true })
+    // => "एक" (rounds to 1.00, decimal omitted)
+
+    digitToNepaliWords(0.001, { includeDecimal: true })
+    // => "शून्य" (rounds to 0.00, decimal omitted)
+    ```
+
+4.  **Currency Format**: These rules apply to both regular and currency formats.
+    ```typescript
+    digitToNepaliWords(1.567, {
+      isCurrency: true,
+      includeDecimal: true
+    })
+    // => "रुपैयाँ एक पैसा सन्ताउन्न"  (rounds to 1.57)
+
+    digitToNepaliWords(1.5, {
+      isCurrency: true,
+      includeDecimal: true
+    })
+    // => "रुपैयाँ एक पैसा पचास"  (pads to 1.50)
+
+    digitToNepaliWords(0.009, { isCurrency: true, includeDecimal: true })
+    // => "रुपैयाँ शून्य पैसा एक" (rounds to 0.01)
+    ```
 
 ## Configuration Options
 
@@ -167,9 +189,9 @@ interface ConverterConfig {
   lang?: "en" | "ne";           // Output language (default: "ne")
   isCurrency?: boolean;         // Format as currency (default: false)
   includeDecimal?: boolean;     // Include decimal part (default: true)
-  currency?: string;            // Custom currency text
-  decimalSuffix?: string;       // Custom decimal suffix
-  currencyDecimalSuffix?: string; // Custom currency decimal suffix
+  currency?: string;            // Custom currency text (empty string omits prefix)
+  decimalSuffix?: string;       // Custom decimal suffix (empty string omits suffix)
+  currencyDecimalSuffix?: string; // Custom currency decimal suffix (empty string omits suffix)
   units?: Record<number, CustomMapping>;    // Custom number words
   scales?: Record<number, CustomMapping>;   // Custom scale words
 }
@@ -216,43 +238,40 @@ digitToNepaliWords(1234, {
 
 ## Best Practices
 
-1. For large numbers (> Number.MAX_SAFE_INTEGER), use BigInt:
+1.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
+    ```typescript
+    digitToNepaliWords(BigInt("12345678901234567890")); // Use BigInt
+    digitToNepaliWords("9".repeat(39)); // Use string for max value
+    ```
 
-```typescript
-try {
-  // These will throw "Input must contain only valid digits"
-  digitToNepaliWords(-123);        // Negative numbers
-  digitToNepaliWords("abc");       // Non-numeric input
-  digitToNepaliWords("1.2a");      // Invalid decimal
-  digitToNepaliWords(NaN);         // NaN
-  digitToNepaliWords(Infinity);    // Infinity
-} catch (error) {
-  console.error(error.message);
-}
-```
+2.  Handle potential errors, especially for invalid inputs or numbers exceeding the maximum supported value:
+    ```typescript
+    try {
+      // These will throw errors
+      digitToNepaliWords(-123);        // Negative numbers
+      digitToNepaliWords("abc");       // Non-numeric input
+      digitToNepaliWords("1.2a");      // Invalid decimal
+      digitToNepaliWords(NaN);         // NaN
+      digitToNepaliWords(Infinity);    // Infinity
+      digitToNepaliWords("1".repeat(40)); // Exceeds max length/value
+    } catch (error) {
+      console.error(error.message);
+    }
+    ```
 
-2. For currency values, always set both flags:
+3.  For currency values, typically set both flags:
+    ```typescript
+    digitToNepaliWords(amount, {
+      isCurrency: true,
+      includeDecimal: true, // Usually desired for currency
+    });
+    ```
 
-```typescript
-digitToNepaliWords(amount, {
-  isCurrency: true,
-  includeDecimal: true,
-});
-```
-
-3. Always validate input before passing to the converter:
-
-```typescript
-try {
-  const result = digitToNepaliWords(userInput);
-} catch (error) {
-  console.error("Invalid input:", error.message);
-}
-```
+4.  The library relies on standard `parseFloat` and `BigInt` behavior for parsing strings. Ensure your string inputs are valid representations.
 
 ## Number Scale Support
 
-The library supports numbers up to Adanta Singhar (10^39). Here's the complete scale:
+The library supports numbers up to `10^39 - 1`. Here's the complete scale used:
 
 | Power | English        | Nepali      | Example                                                     |
 | ----- | -------------- | ----------- | ----------------------------------------------------------- |
