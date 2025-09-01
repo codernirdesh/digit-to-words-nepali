@@ -3,8 +3,16 @@ import { ConverterConfig, ConversionResult } from '../types/converterTypes';
 import { isValidNumber, splitNumber } from '../utils/validationUtils';
 import { nepaliScaleMappings } from '../mappings/scaleMappings';
 import { createNumberWordMap } from '../mappings/numberMappings';
-import { digitToEnglishWords } from './englishConverter';
 
+import { digitToEnglishWords } from './englishConverter';
+import { conversionCache } from '../utils/cacheUtils';
+import { ConverterFactory } from '../utils/converterFactory';
+
+/**
+ * NepaliConverter
+ * Converts numbers to Nepali words with support for currency, decimals, and custom mappings.
+ * Optimized for readability, maintainability, and performance.
+ */
 export class NepaliConverter extends BaseConverter {
   constructor() {
     super();
@@ -12,51 +20,69 @@ export class NepaliConverter extends BaseConverter {
     this.scales = nepaliScaleMappings;
   }
 
+  /**
+   * Convert a number to Nepali words.
+   * @param num - The number to convert
+   * @param config - Conversion configuration (all fields required)
+   */
   convert(
     num: number | string | bigint,
     config: Required<ConverterConfig>
   ): ConversionResult {
     this.setCustomMappings(config);
 
-    // Initial validation for type and basic format
+    // Validate input
     if (!isValidNumber(num)) {
       throw new Error('Input must contain only valid digits');
     }
 
-    // Process and split the number
+    // Use cache if no custom mappings
+    const hasCustomMappings = Object.keys(config.units).length > 0 || Object.keys(config.scales).length > 0;
+    if (!hasCustomMappings) {
+      const cacheKey = {
+        value: num.toString(),
+        lang: config.lang,
+        isCurrency: config.isCurrency,
+        includeDecimal: config.includeDecimal,
+        currency: config.currency,
+        decimalSuffix: config.decimalSuffix,
+        currencyDecimalSuffix: config.currencyDecimalSuffix
+      };
+      const cachedResult = conversionCache.get(cacheKey);
+      if (cachedResult) return cachedResult;
+    }
+
+    // Split number into integer and decimal parts
     const { integer, decimal } = splitNumber(num);
 
-    // Enforce maximum supported value (10^39 - 1) and maximum length (39 digits)
-    const MAX_SUPPORTED = BigInt("9".repeat(39));
-    const intStr = integer.toString().replace(/^0+/, '') || '0'; // Handle leading zeros for length check
-    if (
-      integer > MAX_SUPPORTED ||
-      intStr.length > 39
-    ) {
+    // Enforce maximum supported value (10^39 - 1) and max length (39 digits)
+    const MAX_SUPPORTED = BigInt('9'.repeat(39));
+    const intStr = integer.toString().replace(/^0+/, '') || '0';
+    if (integer > MAX_SUPPORTED || intStr.length > 39) {
       throw new Error('Input exceeds maximum supported value (10^39 - 1)');
     }
 
     const words: string[] = [];
+    // Determine if input is zero or a fraction (e.g., 0.01)
     const isZeroOrFraction = (typeof num === 'bigint' ? num === 0n : parseFloat(num.toString()) < 1 && parseFloat(num.toString()) > -1);
 
-    // Convert integer part
+    // Integer part conversion
     if (integer === 0n) {
       // Add "zero" if the original number was effectively zero before the decimal,
       // or if there's no decimal part.
       if (isZeroOrFraction || !decimal) {
-         // Only add zero if the decimal part isn't going to represent the only value (e.g., 0.01)
-         // unless the decimal itself is zero.
-         if (!decimal || parseInt(decimal) === 0) {
-            words.push(this.getWordMapping(0, config.lang));
-         }
+        // Only add zero if the decimal part isn't going to represent the only value (e.g., 0.01)
+        if (!decimal || parseInt(decimal || '0') === 0) {
+          words.push(this.getWordMapping(0, config.lang));
+        }
       }
     } else {
       this.processLargeNumber(integer, words, config);
     }
 
-    // Handle decimal part
+    // Decimal part conversion
     if (config.includeDecimal && decimal) {
-      const decimalNum = parseInt(decimal);
+      const decimalNum = parseInt(decimal || '0');
       // Only add decimal suffix and value if the decimal part is non-zero
       if (decimalNum !== 0) {
         // If the integer part was zero, add it now before the decimal.
@@ -87,8 +113,8 @@ export class NepaliConverter extends BaseConverter {
     if (words.length === 0) {
        words.push(this.getWordMapping(0, config.lang));
     }
-
-    return {
+    
+    const result: ConversionResult = {
       words,
       meta: {
         originalNumber: num.toString(),
@@ -96,6 +122,22 @@ export class NepaliConverter extends BaseConverter {
         isCurrency: config.isCurrency
       }
     };
+    
+    // Store in cache if no custom mappings
+    if (!hasCustomMappings) {
+      const cacheKey = {
+        value: num.toString(),
+        lang: config.lang,
+        isCurrency: config.isCurrency,
+        includeDecimal: config.includeDecimal,
+        currency: config.currency,
+        decimalSuffix: config.decimalSuffix,
+        currencyDecimalSuffix: config.currencyDecimalSuffix
+      };
+      conversionCache.set(cacheKey, result);
+    }
+    
+    return result;
   }
 }
 
@@ -107,8 +149,9 @@ export const digitToNepaliWords = (
   if (config.lang === 'en') {
     return digitToEnglishWords(num, config);
   }
-
-  const converter = new NepaliConverter();
+  // Use the converter factory to get a singleton instance
+  const converter = ConverterFactory.getInstance('NepaliConverter', () => new NepaliConverter());
+  
   // Set default language-specific config before merging user config
   const langDefaults = {
     currency: 'रुपैयाँ',
@@ -128,5 +171,5 @@ export const digitToNepaliWords = (
 
   const result = converter.convert(num, defaultConfig);
   // Filter out empty strings that might result from empty currency/decimal suffixes
-  return result.words.filter(word => word !== '').join(' ').trim();
+  return result.words.filter((word: string) => word !== '').join(' ').trim();
 };

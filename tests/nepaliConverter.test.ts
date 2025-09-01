@@ -413,6 +413,16 @@ describe("Nepali Number to Words Converter", () => {
         const result = digitToNepaliWords(1234567890);
         expect(result).toBe("एक अरब तेइस करोड पैँतालीस लाख सतसट्ठी हजार आठ सय नब्बे");
       });
+
+      it("should handle complex kharab scale numbers", () => {
+        const result = digitToNepaliWords(1756000000000);
+        expect(result).toBe("सत्र खरब छपन्न अरब");
+      });
+
+      it("should handle complex kharab scale numbers with currency", () => {
+        const result = digitToNepaliWords(1756000000000, { isCurrency: true });
+        expect(result).toBe("रुपैयाँ सत्र खरब छपन्न अरब");
+      });
     });
 
     describe("Maximum Scale Numbers", () => {

@@ -1,25 +1,40 @@
 import { Language } from './converterTypes';
 
+/**
+ * Word mapping for a number in both supported languages
+ */
 export interface WordMapping {
   en: string;
   ne: string;
 }
 
+/**
+ * Number scale definition with BigInt value and language names
+ */
 export interface NumberScale {
   value: bigint;
   names: Record<Language, string>;
 }
 
+/**
+ * Unit mapping for individual numbers
+ */
 export interface UnitMapping {
   value: number;
   names: Record<Language, string>;
 }
 
+/**
+ * Scale definition for number scales
+ */
 export interface ScaleDefinition {
   value: number;
   names: Record<Language, string>;
 }
 
+/**
+ * All numbers that have direct word mappings (0-99)
+ */
 export type MappableNumbers = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
   11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 |
   21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 |
@@ -31,6 +46,9 @@ export type MappableNumbers = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
   81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 |
   91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99;
 
+/**
+ * Valid scale values for the Nepali/Indian number system
+ */
 export const VALID_SCALES = {
   HUNDRED: 100n,
   THOUSAND: 1000n,
@@ -45,4 +63,7 @@ export const VALID_SCALES = {
 
 export type ScaleValues = typeof VALID_SCALES[keyof typeof VALID_SCALES];
 
+/**
+ * Custom mapping structure for language-specific overrides
+ */
 export type CustomMapping = Record<Language, string>;
