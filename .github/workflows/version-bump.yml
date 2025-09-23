@@ -1,0 +1,118 @@
+name: Version Bump and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: ''
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Bump version
+        id: version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Bump version using npm
+          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version --no-commit-hooks)
+          echo "New version: $NEW_VERSION"
+          
+          # Set outputs
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version_number=${NEW_VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG
+        run: |
+          # Create temporary changelog entry
+          {
+            echo "## [${{ steps.version.outputs.version_number }}] - $(date +%Y-%m-%d)"
+            echo ""
+            if [ -n "${{ github.event.inputs.release_notes }}" ]; then
+              echo "${{ github.event.inputs.release_notes }}"
+            else
+              echo "- Version bump: ${{ github.event.inputs.version_type }}"
+            fi
+            echo ""
+            if [ -f CHANGELOG.md ]; then
+              cat CHANGELOG.md
+            fi
+          } > CHANGELOG_TEMP.md
+          mv CHANGELOG_TEMP.md CHANGELOG.md
+
+      - name: Commit changes
+        run: |
+          git add package.json CHANGELOG.md
+          if [ -f package-lock.json ]; then
+            git add package-lock.json
+          fi
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          git tag ${{ steps.version.outputs.new_version }}
+          git push origin HEAD
+          git push origin ${{ steps.version.outputs.new_version }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.new_version }}
+          name: Release ${{ steps.version.outputs.new_version }}
+          body: |
+            ## What's Changed
+            
+            ${{ github.event.inputs.release_notes || 'Version bump and improvements' }}
+            
+            ## Installation
+            
+            ```bash
+            npm install digit-to-words-nepali
+            ```
+            
+            ## Full Changelog
+            
+            See [CHANGELOG.md](https://github.com/codernirdesh/digit-to-words-nepali/blob/main/CHANGELOG.md) for complete details.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
