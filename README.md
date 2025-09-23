@@ -13,6 +13,7 @@ A TypeScript library to convert numbers into their word representations in Engli
   - Binary search algorithm for scale lookup (O(log n) complexity)
 - Currency formatting with custom currency names
 - Decimal number handling with configurable formats and refined rounding/zero logic
+- **Individual decimal digit pronunciation**: Choose between individual digits ("तीन तीन") or combined numbers ("तेत्तिस") for decimal places
 - Language-specific defaults
 - Zero external dependencies
 - Strict input validation
@@ -118,16 +119,37 @@ console.log(`${prefix} ${words}`);
 ### Decimal Handling
 
 ```typescript
-// Regular decimal
-digitToNepaliWords(1.23, { 
+// Individual decimal digits (default for non-currency)
+digitToNepaliWords(1255556.33);
+// Output: "बाह्र लाख पचपन्न हजार पाँच सय छपन्न दशमलव तीन तीन"
+
+// Currency with combined decimal digits (default for currency)
+digitToNepaliWords(1255556.33, { 
+  isCurrency: true,
   includeDecimal: true 
 });
-// Output: "एक दशमलव तेइस"
+// Output: "रुपैयाँ बाह्र लाख पचपन्न हजार पाँच सय छपन्न पैसा तेत्तिस"
 
-// Custom decimal suffix
+// Force combined decimal digits for non-currency
+digitToNepaliWords(1255556.33, { 
+  individualDecimalDigits: false,
+  includeDecimal: true 
+});
+// Output: "बाह्र लाख पचपन्न हजार पाँच सय छपन्न दशमलव तेत्तिस"
+
+// Custom decimal suffix with individual digits
 digitToNepaliWords(1.23, {
   lang: "en",
   includeDecimal: true,
+  decimalSuffix: "point"
+});
+// Output: "one point two three"
+
+// Custom decimal suffix with combined digits
+digitToNepaliWords(1.23, {
+  lang: "en",
+  includeDecimal: true,
+  individualDecimalDigits: false,
   decimalSuffix: "point"
 });
 // Output: "one point twenty three"
@@ -185,6 +207,39 @@ The library follows these rules for decimal places:
     // => "रुपैयाँ शून्य पैसा एक" (rounds to 0.01)
     ```
 
+### Individual vs Combined Decimal Digits
+
+The library now supports two modes for pronouncing decimal digits:
+
+1. **Individual Digits (Default for non-currency)**: Each decimal digit is pronounced separately
+   ```typescript
+   digitToNepaliWords(1255556.33)
+   // => "बाह्र लाख पचपन्न हजार पाँच सय छपन्न दशमलव तीन तीन"
+   
+   digitToNepaliWords(1.05)
+   // => "एक दशमलव शून्य पाँच"
+   ```
+
+2. **Combined Digits (Default for currency)**: Decimal digits are treated as a single number
+   ```typescript
+   digitToNepaliWords(1255556.33, { isCurrency: true })
+   // => "रुपैयाँ बाह्र लाख पचपन्न हजार पाँच सय छपन्न पैसा तेत्तिस"
+   
+   digitToNepaliWords(1.05, { individualDecimalDigits: false })
+   // => "एक दशमलव पाँच"
+   ```
+
+3. **Override Behavior**: You can control this behavior using the `individualDecimalDigits` option
+   ```typescript
+   // Force combined digits for non-currency
+   digitToNepaliWords(1.33, { individualDecimalDigits: false })
+   // => "एक दशमलव तेत्तिस"
+   
+   // Force individual digits for currency (unusual but possible)
+   digitToNepaliWords(1.33, { isCurrency: true, individualDecimalDigits: true })
+   // => "रुपैयाँ एक पैसा तीन तीन"
+   ```
+
 ## Configuration Options
 
 ### Basic Configuration
@@ -193,6 +248,7 @@ interface ConverterConfig {
   lang?: "en" | "ne";           // Output language (default: "ne")
   isCurrency?: boolean;         // Format as currency (default: false)
   includeDecimal?: boolean;     // Include decimal part (default: true)
+  individualDecimalDigits?: boolean; // Spell decimal digits individually (default: true for non-currency, false for currency)
   currency?: string;            // Custom currency text (empty string omits prefix)
   decimalSuffix?: string;       // Custom decimal suffix (empty string omits suffix)
   currencyDecimalSuffix?: string; // Custom currency decimal suffix (empty string omits suffix)
@@ -242,13 +298,27 @@ digitToNepaliWords(1234, {
 
 ## Best Practices
 
-1.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
+1.  **Migration from v0.1.1 and earlier**: The default decimal behavior changed in v0.1.2. If you need the old combined decimal behavior for non-currency numbers, set `individualDecimalDigits: false`:
+    ```typescript
+    // Old behavior (v0.1.1 and earlier)
+    digitToNepaliWords(1.33) // => "एक दशमलव तेत्तिस"
+    
+    // New behavior (v0.1.2+)
+    digitToNepaliWords(1.33) // => "एक दशमलव तीन तीन"
+    
+    // To get old behavior in v0.1.2+
+    digitToNepaliWords(1.33, { individualDecimalDigits: false })
+    // => "एक दशमलव तेत्तिस"
+    ```
+
+2.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
+2.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
     ```typescript
     digitToNepaliWords(BigInt("12345678901234567890")); // Use BigInt
     digitToNepaliWords("9".repeat(39)); // Use string for max value
     ```
 
-2.  Handle potential errors, especially for invalid inputs or numbers exceeding the maximum supported value:
+3.  Handle potential errors, especially for invalid inputs or numbers exceeding the maximum supported value:
     ```typescript
     try {
       // These will throw errors
@@ -263,7 +333,7 @@ digitToNepaliWords(1234, {
     }
     ```
 
-3.  For currency values, typically set both flags:
+4.  For currency values, typically set both flags:
     ```typescript
     digitToNepaliWords(amount, {
       isCurrency: true,
@@ -271,7 +341,7 @@ digitToNepaliWords(1234, {
     });
     ```
 
-4.  The library relies on standard `parseFloat` and `BigInt` behavior for parsing strings. Ensure your string inputs are valid representations.
+5.  The library relies on standard `parseFloat` and `BigInt` behavior for parsing strings. Ensure your string inputs are valid representations.
 
 ## Number Scale Support
 

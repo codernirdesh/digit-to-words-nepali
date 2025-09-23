@@ -221,12 +221,12 @@ describe("Nepali Number to Words Converter", () => {
     });
 
     describe("Non-Currency Decimals", () => {
-      it("should handle simple decimal numbers", () => {
+      it("should handle simple decimal numbers with individual digits", () => {
         const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
           lang: "ne"
         });
-        expect(result).toBe("एक दशमलव पचास");
+        expect(result).toBe("एक दशमलव पाँच शून्य");
       });
 
       it("should handle zero decimal part", () => {
@@ -237,36 +237,53 @@ describe("Nepali Number to Words Converter", () => {
         expect(result).toBe("एक");
       });
 
-      it("should handle multiple decimal places", () => {
+      it("should handle multiple decimal places with individual digits", () => {
         const result = digitToNepaliWords(1.23, {
           includeDecimal: true,
           lang: "ne"
         });
-        expect(result).toBe("एक दशमलव तेइस");
+        expect(result).toBe("एक दशमलव दुई तीन");
       });
 
-      it("should use custom decimal suffix when provided", () => {
+      it("should use custom decimal suffix when provided with individual digits", () => {
         const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
           decimalSuffix: "point"
         });
-        expect(result).toBe("एक point पचास");
+        expect(result).toBe("एक point पाँच शून्य");
       });
 
-      it("should round long decimals to 2 places", () => {
+      it("should round long decimals to 2 places with individual digits", () => {
         const result = digitToNepaliWords(1.237, {
           includeDecimal: true,
           lang: "ne"
         });
-        expect(result).toBe("एक दशमलव चौबिस");
+        expect(result).toBe("एक दशमलव दुई चार");
       });
 
-      it("should pad single decimal digit", () => {
+      it("should pad single decimal digit with individual digits", () => {
         const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
           lang: "ne"
         });
+        expect(result).toBe("एक दशमलव पाँच शून्य");
+      });
+
+      it("should allow forcing combined decimal digits for non-currency", () => {
+        const result = digitToNepaliWords(1.5, {
+          includeDecimal: true,
+          individualDecimalDigits: false,
+          lang: "ne"
+        });
         expect(result).toBe("एक दशमलव पचास");
+      });
+
+      it("should handle the user's specific example (1255556.33) with individual digits", () => {
+        const result = digitToNepaliWords(1255556.33, {
+          includeDecimal: true,
+          lang: "ne"
+        });
+        expect(result).toBe("बाह्र लाख पचपन्न हजार पाँच सय छपन्न दशमलव तीन तीन");
       });
     });
 
@@ -284,7 +301,7 @@ describe("Nepali Number to Words Converter", () => {
         expect(digitToNepaliWords(0.001, { includeDecimal: true })).toBe("शून्य");
       });
       it("should handle rounding up near zero (0.009)", () => {
-        expect(digitToNepaliWords(0.009, { includeDecimal: true })).toBe("शून्य दशमलव एक");
+        expect(digitToNepaliWords(0.009, { includeDecimal: true })).toBe("शून्य दशमलव शून्य एक");
       });
       it("should handle rounding up to next integer (1.999)", () => {
         expect(digitToNepaliWords(1.999, { includeDecimal: true })).toBe("दुई");
@@ -488,7 +505,7 @@ describe("Nepali Number to Words Converter", () => {
         includeDecimal: true,
         decimalSuffix: "point"
       });
-      expect(result).toBe("one thousand two hundred thirty four point fifty six");
+      expect(result).toBe("one thousand two hundred thirty four point five six");
     });
   });
 
@@ -563,7 +580,7 @@ describe("Nepali Number to Words Converter", () => {
         includeDecimal: true,
         decimalSuffix: ""
       });
-      expect(result).toBe("एक सय तेइस पैँतालीस");
+      expect(result).toBe("एक सय तेइस चार पाँच");
       expect(result).not.toContain(" दशमलव ");
     });
 
@@ -588,7 +605,7 @@ describe("Nepali Number to Words Converter", () => {
     it("should handle zero decimal correctly with empty suffixes", () => {
       expect(digitToNepaliWords(123.00, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस");
       expect(digitToNepaliWords(123.001, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस");
-      expect(digitToNepaliWords(123.009, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस एक");
+      expect(digitToNepaliWords(123.009, { includeDecimal: true, decimalSuffix: "" })).toBe("एक सय तेइस शून्य एक");
     });
 
     it("should throw for negative BigInt", () => {
