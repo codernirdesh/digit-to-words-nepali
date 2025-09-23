@@ -1,3 +1,7 @@
+## [0.1.0] - 2025-09-23
+
+- Version bump: minor
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
