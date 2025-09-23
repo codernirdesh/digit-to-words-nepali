@@ -21,6 +21,24 @@ export class NepaliConverter extends BaseConverter {
   }
 
   /**
+   * Convert decimal digits individually to Nepali words.
+   * @param decimal - The decimal string (e.g., "33")
+   * @param config - Conversion configuration
+   * @returns Array of individual digit words
+   */
+  private convertDecimalDigitsIndividually(decimal: string, config: Required<ConverterConfig>): string[] {
+    const digits = decimal.split('');
+    const words: string[] = [];
+    
+    for (const digit of digits) {
+      const digitNum = parseInt(digit);
+      words.push(this.getWordMapping(digitNum, config.lang));
+    }
+    
+    return words;
+  }
+
+  /**
    * Convert a number to Nepali words.
    * @param num - The number to convert
    * @param config - Conversion configuration (all fields required)
@@ -44,6 +62,7 @@ export class NepaliConverter extends BaseConverter {
         lang: config.lang,
         isCurrency: config.isCurrency,
         includeDecimal: config.includeDecimal,
+        individualDecimalDigits: config.individualDecimalDigits,
         currency: config.currency,
         decimalSuffix: config.decimalSuffix,
         currencyDecimalSuffix: config.currencyDecimalSuffix
@@ -90,7 +109,14 @@ export class NepaliConverter extends BaseConverter {
            words.push(this.getWordMapping(0, config.lang));
         }
         words.push(config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix);
-        words.push(this.getWordMapping(decimalNum, config.lang));
+        
+        // Use individual digits for non-currency or when explicitly configured
+        if (config.individualDecimalDigits) {
+          const individualDigits = this.convertDecimalDigitsIndividually(decimal, config);
+          words.push(...individualDigits);
+        } else {
+          words.push(this.getWordMapping(decimalNum, config.lang));
+        }
       } else if (integer === 0n && words.length === 0) {
         // If integer was 0 and decimal rounded to 0, ensure "zero" is output
         words.push(this.getWordMapping(0, config.lang));
@@ -130,6 +156,7 @@ export class NepaliConverter extends BaseConverter {
         lang: config.lang,
         isCurrency: config.isCurrency,
         includeDecimal: config.includeDecimal,
+        individualDecimalDigits: config.individualDecimalDigits,
         currency: config.currency,
         decimalSuffix: config.decimalSuffix,
         currencyDecimalSuffix: config.currencyDecimalSuffix
@@ -163,11 +190,17 @@ export const digitToNepaliWords = (
     lang: 'ne',
     isCurrency: false,
     includeDecimal: true,
+    individualDecimalDigits: true, // Default to individual digits
     units: {},
     scales: {},
     ...langDefaults, // Apply language defaults
     ...config // User config overrides defaults
   };
+
+  // Override individualDecimalDigits based on currency setting if not explicitly set
+  if (config.individualDecimalDigits === undefined) {
+    defaultConfig.individualDecimalDigits = !defaultConfig.isCurrency;
+  }
 
   const result = converter.convert(num, defaultConfig);
   // Filter out empty strings that might result from empty currency/decimal suffixes

@@ -10,6 +10,7 @@ type CacheKey = {
   lang: string;
   isCurrency: boolean;
   includeDecimal: boolean;
+  individualDecimalDigits?: boolean;
   currency?: string;
   decimalSuffix?: string;
   currencyDecimalSuffix?: string;
@@ -21,6 +22,7 @@ const createCacheKey = (key: CacheKey): string => [
   key.lang,
   key.isCurrency ? '1' : '0',
   key.includeDecimal ? '1' : '0',
+  key.individualDecimalDigits ? '1' : '0',
   key.currency || '',
   key.decimalSuffix || '',
   key.currencyDecimalSuffix || ''

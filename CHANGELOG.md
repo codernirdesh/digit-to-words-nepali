@@ -1,3 +1,21 @@
+## [0.1.2] - 2025-09-23
+
+### Added
+- **Individual Decimal Digits Feature**: New configuration option `individualDecimalDigits` to control how decimal places are pronounced
+  - Default behavior now spells decimal digits individually for non-currency numbers (e.g., "1.33" → "एक दशमलव तीन तीन")
+  - Currency mode retains combined decimal pronunciation (e.g., "1.33" → "रुपैयाँ एक पैसा तेत्तिस")
+  - Users can override the default behavior using the `individualDecimalDigits` configuration option
+
+### Changed
+- **Breaking Change**: Default decimal pronunciation for non-currency numbers now uses individual digits instead of combined numbers
+  - Before: `1.33` → "एक दशमलव तेत्तिस" 
+  - After: `1.33` → "एक दशमलव तीन तीन"
+- Enhanced cache system to support the new configuration parameter
+- Updated both English and Nepali converters to support individual decimal digit pronunciation
+
+### Fixed
+- Improved decimal handling logic for better consistency across different number formats
+
 ## [0.1.1] - 2025-09-23
 
 - Version bump: patch

@@ -19,6 +19,24 @@ export class EnglishConverter extends BaseConverter {
   }
 
   /**
+   * Convert decimal digits individually to English words.
+   * @param decimal - The decimal string (e.g., "33")
+   * @param config - Conversion configuration
+   * @returns Array of individual digit words
+   */
+  private convertDecimalDigitsIndividually(decimal: string, config: Required<ConverterConfig>): string[] {
+    const digits = decimal.split('');
+    const words: string[] = [];
+    
+    for (const digit of digits) {
+      const digitNum = parseInt(digit);
+      words.push(this.getWordMapping(digitNum, 'en'));
+    }
+    
+    return words;
+  }
+
+  /**
    * Convert a number to English words.
    * @param num - The number to convert
    * @param config - Conversion configuration (all fields required)
@@ -42,6 +60,7 @@ export class EnglishConverter extends BaseConverter {
         lang: config.lang,
         isCurrency: config.isCurrency,
         includeDecimal: config.includeDecimal,
+        individualDecimalDigits: config.individualDecimalDigits,
         currency: config.currency,
         decimalSuffix: config.decimalSuffix,
         currencyDecimalSuffix: config.currencyDecimalSuffix
@@ -68,7 +87,13 @@ export class EnglishConverter extends BaseConverter {
       if (decimalNum === 0) {
         words.push(this.getWordMapping(0, 'en'));
       } else {
-        words.push(this.getWordMapping(decimalNum, 'en'));
+        // Use individual digits for non-currency or when explicitly configured
+        if (config.individualDecimalDigits) {
+          const individualDigits = this.convertDecimalDigitsIndividually(decimal, config);
+          words.push(...individualDigits);
+        } else {
+          words.push(this.getWordMapping(decimalNum, 'en'));
+        }
       }
     }
 
@@ -93,6 +118,7 @@ export class EnglishConverter extends BaseConverter {
         lang: config.lang,
         isCurrency: config.isCurrency,
         includeDecimal: config.includeDecimal,
+        individualDecimalDigits: config.individualDecimalDigits,
         currency: config.currency,
         decimalSuffix: config.decimalSuffix,
         currencyDecimalSuffix: config.currencyDecimalSuffix
@@ -134,6 +160,7 @@ export const digitToEnglishWords = (
     lang: 'en',
     isCurrency: false,
     includeDecimal: true,
+    individualDecimalDigits: true, // Default to individual digits
     currency: 'Dollars',
     decimalSuffix: 'point',
     currencyDecimalSuffix: 'cents',
@@ -141,6 +168,11 @@ export const digitToEnglishWords = (
     scales: {},
     ...config
   };
+
+  // Override individualDecimalDigits based on currency setting if not explicitly set
+  if (config.individualDecimalDigits === undefined) {
+    defaultConfig.individualDecimalDigits = !defaultConfig.isCurrency;
+  }
   
   const result = converter.convert(num, defaultConfig);
   return result.words.filter((word: string) => word !== '').join(' ').trim();
