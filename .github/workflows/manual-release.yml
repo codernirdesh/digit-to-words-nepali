@@ -1,24 +1,19 @@
-name: Version Bump and Release
+name: Manual Release
 
 on:
   workflow_dispatch:
     inputs:
-      version_type:
-        description: 'Version bump type'
+      version:
+        description: 'New version (e.g., 1.0.0)'
         required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+        type: string
       release_notes:
         description: 'Release notes'
         required: false
-        default: ''
+        default: 'Manual release'
 
 jobs:
-  version-bump:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,7 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -49,32 +43,16 @@ jobs:
       - name: Build package
         run: npm run build
 
-      - name: Bump version
-        id: version
+      - name: Update version
         run: |
-          # Get current version
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Bump version using npm
-          NEW_VERSION=$(npm version ${{ github.event.inputs.version_type }} --no-git-tag-version --no-commit-hooks)
-          echo "New version: $NEW_VERSION"
-          
-          # Set outputs
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "version_number=${NEW_VERSION#v}" >> $GITHUB_OUTPUT
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
 
       - name: Update CHANGELOG
         run: |
-          # Create temporary changelog entry
           {
-            echo "## [${{ steps.version.outputs.version_number }}] - $(date +%Y-%m-%d)"
+            echo "## [${{ github.event.inputs.version }}] - $(date +%Y-%m-%d)"
             echo ""
-            if [ -n "${{ github.event.inputs.release_notes }}" ]; then
-              echo "${{ github.event.inputs.release_notes }}"
-            else
-              echo "- Version bump: ${{ github.event.inputs.version_type }}"
-            fi
+            echo "${{ github.event.inputs.release_notes }}"
             echo ""
             if [ -f CHANGELOG.md ]; then
               cat CHANGELOG.md
@@ -82,26 +60,26 @@ jobs:
           } > CHANGELOG_TEMP.md
           mv CHANGELOG_TEMP.md CHANGELOG.md
 
-      - name: Commit changes
+      - name: Commit and tag
         run: |
           git add package.json CHANGELOG.md
           if [ -f package-lock.json ]; then
             git add package-lock.json
           fi
-          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          git tag ${{ steps.version.outputs.new_version }}
+          git commit -m "chore: release v${{ github.event.inputs.version }}"
+          git tag v${{ github.event.inputs.version }}
           git push origin HEAD
-          git push origin ${{ steps.version.outputs.new_version }}
+          git push origin v${{ github.event.inputs.version }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.version.outputs.new_version }}
-          name: Release ${{ steps.version.outputs.new_version }}
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
           body: |
             ## What's Changed
             
-            ${{ github.event.inputs.release_notes || 'Version bump and improvements' }}
+            ${{ github.event.inputs.release_notes }}
             
             ## Installation
             
