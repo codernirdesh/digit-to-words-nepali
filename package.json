@@ -8,7 +8,10 @@
     "build": "tsc",
     "test": "jest",
     "prepare": "npm run build",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm test && npm run build",
+    "version": "npm run build && git add -A dist",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "digit",
@@ -41,6 +44,11 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.md"
-  ]
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
