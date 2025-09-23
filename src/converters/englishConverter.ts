@@ -3,7 +3,14 @@ import { ConverterConfig, ConversionResult } from '../types/converterTypes';
 import { isValidNumber, splitNumber } from '../utils/validationUtils';
 import { englishScaleMappings } from '../mappings/scaleMappings';
 import { createNumberWordMap } from '../mappings/numberMappings';
+import { conversionCache } from '../utils/cacheUtils';
+import { ConverterFactory } from '../utils/converterFactory';
 
+/**
+ * EnglishConverter
+ * Converts numbers to English words with support for currency, decimals, and custom mappings.
+ * Optimized for readability, maintainability, and performance.
+ */
 export class EnglishConverter extends BaseConverter {
   constructor() {
     super();
@@ -11,27 +18,50 @@ export class EnglishConverter extends BaseConverter {
     this.scales = englishScaleMappings;
   }
 
+  /**
+   * Convert a number to English words.
+   * @param num - The number to convert
+   * @param config - Conversion configuration (all fields required)
+   */
   convert(
     num: number | string | bigint,
     config: Required<ConverterConfig>
   ): ConversionResult {
     this.setCustomMappings(config);
 
+    // Validate input
     if (!isValidNumber(num)) {
       throw new Error('Input must contain only valid digits');
     }
 
+    // Use cache if no custom mappings
+    const hasCustomMappings = Object.keys(config.units).length > 0 || Object.keys(config.scales).length > 0;
+    if (!hasCustomMappings) {
+      const cacheKey = {
+        value: num.toString(),
+        lang: config.lang,
+        isCurrency: config.isCurrency,
+        includeDecimal: config.includeDecimal,
+        currency: config.currency,
+        decimalSuffix: config.decimalSuffix,
+        currencyDecimalSuffix: config.currencyDecimalSuffix
+      };
+      const cachedResult = conversionCache.get(cacheKey);
+      if (cachedResult) return cachedResult;
+    }
+
+    // Split number into integer and decimal parts
     const { integer, decimal } = splitNumber(num);
     const words: string[] = [];
 
-    // Convert integer part
+    // Integer part conversion
     if (integer === 0n) {
       words.push(this.getWordMapping(0, 'en'));
     } else {
       this.processLargeNumber(integer, words, config);
     }
 
-    // Handle decimal part
+    // Decimal part conversion
     if (config.includeDecimal && decimal) {
       words.push(config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix);
       const decimalNum = parseInt(decimal);
@@ -47,7 +77,7 @@ export class EnglishConverter extends BaseConverter {
       words.unshift(config.currency);
     }
 
-    return {
+    const result: ConversionResult = {
       words,
       meta: {
         originalNumber: num.toString(),
@@ -55,6 +85,22 @@ export class EnglishConverter extends BaseConverter {
         isCurrency: config.isCurrency
       }
     };
+
+    // Store in cache if no custom mappings
+    if (!hasCustomMappings) {
+      const cacheKey = {
+        value: num.toString(),
+        lang: config.lang,
+        isCurrency: config.isCurrency,
+        includeDecimal: config.includeDecimal,
+        currency: config.currency,
+        decimalSuffix: config.decimalSuffix,
+        currencyDecimalSuffix: config.currencyDecimalSuffix
+      };
+      conversionCache.set(cacheKey, result);
+    }
+    
+    return result;
   }
 
   private processNumber(num: bigint, words: string[], config: Required<ConverterConfig>): void {
@@ -80,8 +126,11 @@ export const digitToEnglishWords = (
   num: number | string | bigint,
   config: Partial<ConverterConfig> = {}
 ): string => {
-  const converter = new EnglishConverter();
-  const result = converter.convert(num, {
+  // Use the singleton pattern via factory
+  const converter = ConverterFactory.getInstance('EnglishConverter', () => new EnglishConverter());
+  
+  // Default English language settings
+  const defaultConfig: Required<ConverterConfig> = {
     lang: 'en',
     isCurrency: false,
     includeDecimal: true,
@@ -91,6 +140,8 @@ export const digitToEnglishWords = (
     units: {},
     scales: {},
     ...config
-  });
-  return result.words.join(' ').trim();
+  };
+  
+  const result = converter.convert(num, defaultConfig);
+  return result.words.filter((word: string) => word !== '').join(' ').trim();
 };

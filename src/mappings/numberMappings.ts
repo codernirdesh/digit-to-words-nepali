@@ -1,5 +1,9 @@
 import { WordMapping } from '../types/mappingTypes';
 
+/**
+ * BASE_NUMBERS
+ * Maps numbers 0-99 to their English and Nepali word representations.
+ */
 export const BASE_NUMBERS = new Map<number, WordMapping>([
   [0, { en: 'zero', ne: 'शून्य' }],
   [1, { en: 'one', ne: 'एक' }],
@@ -103,6 +107,9 @@ export const BASE_NUMBERS = new Map<number, WordMapping>([
   [99, { en: 'ninety nine', ne: 'उनान्सय' }]
 ]);
 
+/**
+ * Returns a new Map of the base number word mappings.
+ */
 export function createNumberWordMap(): Map<number, WordMapping> {
   return new Map(BASE_NUMBERS);
 }

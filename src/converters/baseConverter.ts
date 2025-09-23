@@ -3,6 +3,11 @@ import { WordMapping, NumberScale } from '../types/mappingTypes';
 import { formatWords, formatCurrencyAmount } from '../utils/formatUtils';
 import { validateCustomMappings } from '../utils/validationUtils';
 
+/**
+ * BaseConverter
+ * Abstract class for number-to-words conversion logic.
+ * Handles custom mappings, scale lookups, and large number processing.
+ */
 export abstract class BaseConverter {
   protected wordCache: Map<number, WordMapping>;
   protected scales: NumberScale[];
@@ -16,41 +21,54 @@ export abstract class BaseConverter {
     this.customScales = {};
   }
 
+  /**
+   * Set custom unit and scale mappings from config.
+   * Throws if config is invalid.
+   */
   protected setCustomMappings(config: Required<ConverterConfig>): void {
     if (!validateCustomMappings(config)) {
-      throw new Error('Input must contain only valid digits');
+      throw new Error('Invalid custom mapping configuration');
     }
-    
     this.customUnits = config.units ?? {};
     this.customScales = config.scales ?? {};
   }
 
+  /**
+   * Get the word mapping for a number in the specified language.
+   * Checks custom units first, then default cache.
+   */
   protected getWordMapping(num: number, lang: Language): string {
     if (this.customUnits[num]?.[lang]) {
       return this.customUnits[num][lang];
     }
-
     const mapping = this.wordCache.get(num);
     if (!mapping) {
-      throw new Error('Input must contain only valid digits');
+      throw new Error(`No word mapping found for number: ${num}`);
     }
     return mapping[lang];
   }
 
+  /**
+   * Get the scale name for a value in the specified language.
+   * Checks custom scales first, then default scale list.
+   */
   protected getScaleName(value: bigint, lang: Language): string {
-    // First check custom scales
     const numValue = Number(value);
     if (this.customScales[numValue]?.[lang]) {
       return this.customScales[numValue][lang];
     }
-
     const scale = this.scales.find(s => s.value === value);
     if (!scale) {
-      throw new Error('Input must contain only valid digits');
+      throw new Error(`No scale mapping found for value: ${value}`);
     }
     return scale.names[lang];
   }
 
+  /**
+   * Process a large number by recursively breaking it down into smaller components
+   * using the appropriate scale values.
+   * Uses binary search for performance (O(log n) for n scales).
+   */
   protected processLargeNumber(
     num: bigint,
     words: string[],
@@ -58,15 +76,20 @@ export abstract class BaseConverter {
   ): void {
     if (num === 0n) return;
 
-    // Find largest applicable scale by iterating once
+    // Find largest applicable scale using binary search
     let currentScale: NumberScale | undefined;
-    for (const scale of this.scales) {
-      if (num >= scale.value) {
-        currentScale = scale;
-        break;
+    let left = 0;
+    let right = this.scales.length - 1;
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      if (this.scales[mid].value <= num) {
+        currentScale = this.scales[mid];
+        right = mid - 1; // Continue searching for a larger scale
+      } else {
+        left = mid + 1;
       }
     }
-
+    
     if (!currentScale) {
       // Handle numbers less than smallest scale (100)
       if (num <= 99n) {

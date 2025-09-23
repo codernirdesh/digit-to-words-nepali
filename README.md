@@ -7,6 +7,10 @@ A TypeScript library to convert numbers into their word representations in Engli
 - Convert numbers to words in English and Nepali languages
 - Support for numbers up to `999...9` (39 nines), effectively `10^39 - 1`. Throws error for larger numbers or inputs with more than 39 digits (ignoring leading zeros).
 - Native BigInt support for large numbers
+- High-performance optimizations:
+  - LRU caching for frequently converted values
+  - Efficient singleton converter instances via factory pattern
+  - Binary search algorithm for scale lookup (O(log n) complexity)
 - Currency formatting with custom currency names
 - Decimal number handling with configurable formats and refined rounding/zero logic
 - Language-specific defaults
@@ -295,6 +299,188 @@ The library supports numbers up to `10^39 - 1`. Here's the complete scale used:
 | 10^35 | singhar        | सिंघर       | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000       |
 | 10^37 | maha singhar   | महासिंघर    | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000    |
 | 10^39 | adanta singhar | अदन्त सिंघर | 1,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,000 |
+
+## Architecture and Flow
+
+The following diagram illustrates the high-level architecture and data flow of the `digit-to-words-nepali` library with all optimizations:
+
+```mermaid
+flowchart TB
+    subgraph Input
+        A[User Input: number/string/bigint]
+    end
+
+    subgraph CacheLayer
+        B1[Check Cache]
+        B2[Cache Miss]
+        B3[Cache Hit]
+    end
+
+    subgraph FactoryLayer
+        C1[ConverterFactory]
+        C2[Get Singleton Instance]
+    end
+
+    subgraph ConverterLayer
+        D1[Nepali Converter]
+        D2[English Converter]
+        D3[Base Converter]
+    end
+
+    subgraph ProcessingLayer
+        E1[Input Validation]
+        E2[Split Number]
+        E3[Convert Integer Part]
+        E4[Binary Search for Scale]
+        E5[Handle Decimal Part]
+        E6[Format Result]
+    end
+
+    subgraph Output
+        F[Formatted Word Result]
+    end
+
+    %% Main Flow
+    A --> B1
+    B1 --> B2
+    B1 --> B3
+
+    %% Cache Miss Path
+    B2 --> C1
+    C1 --> C2
+    C2 --> D1
+    C2 --> D2
+    D1 --> E1
+    D2 --> E1
+    D1 & D2 -.-> D3
+
+    %% Processing Flow
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+    E4 --> E5
+    E5 --> E6
+    
+    %% Output Path
+    E6 --> F
+    B3 --> F
+
+    %% Style
+    classDef highlight fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef optimization fill:#bbf,stroke:#333;
+    class B1,B3,C1,C2,E4 optimization;
+    class A,F highlight;
+```
+
+The diagram shows the optimized architecture with:
+
+1. **Caching Layer**: LRU cache for frequently converted numbers
+2. **Factory Layer**: Singleton pattern for efficient converter instances
+3. **Converter Layer**: Base/Specialized converter hierarchy
+4. **Processing Layer**: The core conversion logic with optimizations like binary search
+5. **Input/Output**: User-facing interfaces
+
+The optimized architecture provides significant performance improvements while maintaining the same API and functionality.
+
+### Optimization Details
+
+The library includes several key optimizations that improve performance:
+
+```mermaid
+flowchart LR
+    subgraph "Before Optimization"
+        A1[Linear Scanning\nfor Scale Values]
+        B1[New Converter\nInstance Each Call]
+        C1[Repeated Calculations\nfor Same Values]
+    end
+
+    subgraph "After Optimization"
+        A2[Binary Search\nO(log n) Complexity]
+        B2[Singleton Factory Pattern\nReused Instances]
+        C2[LRU Caching\nFast Lookups]
+    end
+
+    A1 -->|Optimized| A2
+    B1 -->|Optimized| B2
+    C1 -->|Optimized| C2
+
+    classDef before fill:#ffcccc,stroke:#333;
+    classDef after fill:#ccffcc,stroke:#333;
+    class A1,B1,C1 before;
+    class A2,B2,C2 after;
+```
+
+These optimizations are particularly impactful for:
+- Applications that convert the same numbers repeatedly
+- Handling very large numbers with many scale transitions
+- Systems with high throughput requirements
+- Mobile or resource-constrained environments
+
+### Class Structure
+
+The following diagram illustrates the structure and relationships between the different classes and components:
+
+```mermaid
+classDiagram
+    class BaseConverter {
+        <<abstract>>
+        +wordCache: Map<number, WordMapping>
+        +scales: NumberScale[]
+        +customUnits: CustomUnits
+        +customScales: CustomScales
+        +setCustomMappings(config: ConverterConfig)
+        +getWordMapping(num: number, lang: Language)
+        +getScaleName(value: bigint, lang: Language)
+        +processLargeNumber(num: bigint, words: string[], config: ConverterConfig)
+        +formatResult(words: string[], config: ConverterConfig)
+        +convert(num: any, config: ConverterConfig): ConversionResult*
+    }
+    
+    class NepaliConverter {
+        +constructor()
+        +convert(num: any, config: ConverterConfig): ConversionResult
+    }
+    
+    class EnglishConverter {
+        +constructor()
+        +convert(num: any, config: ConverterConfig): ConversionResult
+    }
+    
+    class ConversionCache {
+        -cache: Map<string, ConversionResult>
+        -maxSize: number
+        +get(key: CacheKey): ConversionResult | undefined
+        +set(key: CacheKey, result: ConversionResult)
+        +clear()
+        +size: number
+    }
+    
+    class ConverterFactory {
+        -instances: Map<string, BaseConverter>
+        +getInstance<T>(className: string, creator: () => T): T
+        +clearInstances()
+    }
+    
+    BaseConverter <|-- NepaliConverter : extends
+    BaseConverter <|-- EnglishConverter : extends
+    NepaliConverter -- ConverterFactory : creates/gets
+    EnglishConverter -- ConverterFactory : creates/gets
+    NepaliConverter -- ConversionCache : uses
+    EnglishConverter -- ConversionCache : uses
+    
+    class digitToNepaliWords {
+        <<function>>
+    }
+    
+    class digitToEnglishWords {
+        <<function>>
+    }
+    
+    digitToNepaliWords -- NepaliConverter : uses
+    digitToEnglishWords -- EnglishConverter : uses
+```
+
+This class structure allows for code reuse, maintainability, and the performance optimizations described above.
 
 ## License
 

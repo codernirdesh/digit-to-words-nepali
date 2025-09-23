@@ -1,3 +1,6 @@
+/**
+ * Maps English digits to Nepali unicode digits.
+ */
 export const digitMap = {
   '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
   '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
@@ -14,19 +17,18 @@ const nepaliToEnglishDigitMap: Record<NepaliDigit, EnglishDigit> = Object.fromEn
 /**
  * Converts a string of Nepali unicode digits (०-९) to a JavaScript number.
  * Throws if input is not a valid Nepali digit string or exceeds safe integer.
+ * @param numStr Nepali digit string
+ * @returns number
  */
 export const unicodeToEnglishNumber = (numStr: string): number => {
   const DIGIT_REGEX_NEPALI = /^[०-९]+$/;
-
-  if (typeof numStr !== "string" || numStr.length === 0) {
-    throw new Error("Input must be a non-empty string");
+  if (typeof numStr !== 'string' || numStr.length === 0) {
+    throw new Error('Input must be a non-empty string');
   }
-
   if (!DIGIT_REGEX_NEPALI.test(numStr)) {
-    throw new Error("Input must contain only Nepali digits (०-९)");
+    throw new Error('Input must contain only Nepali digits (०-९)');
   }
-
-  let englishStr = "";
+  let englishStr = '';
   for (const char of numStr) {
     const en = nepaliToEnglishDigitMap[char as NepaliDigit];
     if (en === undefined) {
@@ -34,9 +36,7 @@ export const unicodeToEnglishNumber = (numStr: string): number => {
     }
     englishStr += en;
   }
-
   const num = Number(englishStr);
-
   if (!Number.isSafeInteger(num)) {
     throw new Error("Number exceeds maximum safe integer value");
   }

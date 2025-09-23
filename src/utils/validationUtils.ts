@@ -2,31 +2,24 @@ import { MappableNumbers, ScaleValues } from '../types/mappingTypes';
 import { ConverterConfig, CustomUnits, CustomScales, Language } from '../types/converterTypes';
 import { SCALE_VALUES } from '../mappings/scaleMappings';
 
+/**
+ * Checks if a value is a valid non-negative number, string, or bigint.
+ * Handles decimals, special cases, and size validation.
+ */
 export function isValidNumber(num: number | string | bigint): boolean {
   try {
     if (typeof num === 'bigint') return num >= 0n;
     if (typeof num === 'number') {
       return !isNaN(num) && isFinite(num) && num >= 0;
     }
-
     const str = num.toString().trim();
     if (!str) return false;
-
-    // Handle special cases
-    if (str === 'NaN' || str === 'Infinity' || str === '-Infinity') {
-      return false;
-    }
-
+    // Special cases
+    if (str === 'NaN' || str === 'Infinity' || str === '-Infinity') return false;
     // Handle decimal numbers
     const [intPart, decPart] = str.split('.');
-    if (!intPart || intPart.startsWith('-') || !/^\d+$/.test(intPart)) {
-      return false;
-    }
-
-    if (decPart !== undefined && !/^\d+$/.test(decPart)) {
-      return false;
-    }
-
+    if (!intPart || intPart.startsWith('-') || !/^\d+$/.test(intPart)) return false;
+    if (decPart !== undefined && !/^\d+$/.test(decPart)) return false;
     // Validate the size
     try {
       BigInt(intPart);
@@ -39,6 +32,10 @@ export function isValidNumber(num: number | string | bigint): boolean {
   }
 }
 
+/**
+ * Splits a number into integer and decimal parts with proper rounding.
+ * Handles decimals by rounding to 2 places and managing overflow.
+ */
 export function splitNumber(num: number | string | bigint): {
   integer: bigint;
   decimal?: string;
@@ -47,15 +44,19 @@ export function splitNumber(num: number | string | bigint): {
 
   const str = num.toString();
   const [intPart, decPart] = str.split('.');
-  
   const integer = BigInt(intPart);
-  
+
+  // If no decimal part, return only integer
   if (!decPart) return { integer };
 
+  // Pad to 3 decimal places, then take first 3 digits for precision
   const decimalStr = decPart.padEnd(3, '0').slice(0, 3);
   const decimalNum = Number(`0.${decimalStr}`);
+  
+  // Round to 2 decimal places
   const rounded = Math.round(decimalNum * 100);
 
+  // Handle edge case: if rounding up to 100, increment the integer
   if (rounded === 100) {
     return { integer: integer + 1n };
   }
@@ -66,34 +67,37 @@ export function splitNumber(num: number | string | bigint): {
   };
 }
 
+/**
+ * Rounds a decimal string to 2 places.
+ */
 export function roundDecimal(decimal: string): string {
   const num = parseFloat(`0.${decimal}`);
   const rounded = Math.round(num * 100);
   return rounded.toString().padStart(2, '0');
 }
 
+/**
+ * Validates that a decimal string is within expected range.
+ */
 export function validateDecimal(decimal: string | undefined): boolean {
   if (!decimal) return true;
-  
   const num = parseInt(decimal);
-  return (
-    !isNaN(num) &&
-    num >= 0 &&
-    num <= 99 &&
-    decimal.length <= 2 &&
-    /^\d{1,2}$/.test(decimal)
-  );
+  return !isNaN(num) && num >= 0 && num <= 99 && /^\d{1,2}$/.test(decimal);
 }
 
+/**
+ * Normalizes decimal by removing zero decimals and padding.
+ */
 export function normalizeDecimal(decimal: string | undefined): string | undefined {
   if (!decimal) return undefined;
-  
   const num = parseInt(decimal);
   if (num === 0) return undefined;
-  
   return num.toString().padStart(2, '0');
 }
 
+/**
+ * Validates language mapping structure.
+ */
 function isValidLanguageMapping(mapping: unknown): mapping is Record<Language, string> {
   if (!mapping || typeof mapping !== 'object') return false;
   return (
@@ -104,33 +108,32 @@ function isValidLanguageMapping(mapping: unknown): mapping is Record<Language, s
   );
 }
 
+/**
+ * Validates custom units configuration.
+ */
 function isValidCustomUnits(units: unknown): units is CustomUnits {
   if (!units || typeof units !== 'object') return false;
-  
   return Object.entries(units).every(([key, value]) => {
     const num = Number(key);
-    return (
-      !isNaN(num) &&
-      num >= 0 &&
-      num <= 99 &&
-      isValidLanguageMapping(value)
-    );
+    return !isNaN(num) && num >= 0 && num <= 99 && isValidLanguageMapping(value);
   });
 }
 
+/**
+ * Validates custom scales configuration.
+ */
 function isValidCustomScales(scales: unknown): scales is CustomScales {
   if (!scales || typeof scales !== 'object') return false;
-  
   const validScales = Object.values(SCALE_VALUES).map(Number);
   return Object.entries(scales).every(([key, value]) => {
     const num = Number(key);
-    return (
-      validScales.includes(num) &&
-      isValidLanguageMapping(value)
-    );
+    return validScales.includes(num) && isValidLanguageMapping(value);
   });
 }
 
+/**
+ * Validates the entire custom mappings configuration.
+ */
 export function validateCustomMappings(config: Required<ConverterConfig>): boolean {
   try {
     if (config.units && !isValidCustomUnits(config.units)) return false;
@@ -141,6 +144,9 @@ export function validateCustomMappings(config: Required<ConverterConfig>): boole
   }
 }
 
+/**
+ * Converts a scale to its BigInt value.
+ */
 export function getScaleValue(scale: number | string): bigint {
   const num = typeof scale === 'string' ? parseInt(scale) : scale;
   return BigInt(num);
