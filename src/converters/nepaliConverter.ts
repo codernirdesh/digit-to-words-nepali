@@ -190,16 +190,16 @@ export const digitToNepaliWords = (
     lang: 'ne',
     isCurrency: false,
     includeDecimal: true,
-    individualDecimalDigits: true, // Default to individual digits
+    individualDecimalDigits: false, // Default to combined decimal pronunciation 
     units: {},
     scales: {},
     ...langDefaults, // Apply language defaults
     ...config // User config overrides defaults
   };
 
-  // Override individualDecimalDigits based on currency setting if not explicitly set
+  // Override individualDecimalDigits if not explicitly set - use combined by default
   if (config.individualDecimalDigits === undefined) {
-    defaultConfig.individualDecimalDigits = !defaultConfig.isCurrency;
+    defaultConfig.individualDecimalDigits = false; // Always default to combined
   }
 
   const result = converter.convert(num, defaultConfig);
