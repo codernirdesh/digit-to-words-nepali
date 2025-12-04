@@ -1,4 +1,6 @@
-## [1.0.1] - 2025-12-04
+## [1.0.2] - 2025-12-04
+
+Release via GitHub Actions
 
 Release via GitHub Actions
 
