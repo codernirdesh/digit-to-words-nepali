@@ -1,10 +1,18 @@
 name: Release & Publish
 
 on:
+  # Automatic publish on push to main (after PR merge)
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - '!**.md'
+
   # Automatic release on GitHub releases
   release:
     types: [published]
-  
+
   # Manual workflow dispatch
   workflow_dispatch:
     inputs:
@@ -142,9 +150,14 @@ jobs:
 
   publish-npm:
     name: Publish to npm
-    needs: [test, release]
+    needs: [test]
     runs-on: ubuntu-latest
-    if: always() && needs.test.result == 'success' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true'))
+    if: |
+      always() && needs.test.result == 'success' && (
+        github.event_name == 'push' ||
+        github.event_name == 'release' ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -194,9 +207,14 @@ jobs:
 
   publish-github:
     name: Publish to GitHub Packages
-    needs: [test, release]
+    needs: [test]
     runs-on: ubuntu-latest
-    if: always() && needs.test.result == 'success' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true'))
+    if: |
+      always() && needs.test.result == 'success' && (
+        github.event_name == 'push' ||
+        github.event_name == 'release' ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     permissions:
       contents: read
       packages: write
