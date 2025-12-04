@@ -235,11 +235,21 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Configure package for GitHub Packages
+        run: |
+          # Create a modified package.json with scoped name for GitHub Packages
+          node -e "
+            const pkg = require('./package.json');
+            pkg.name = '@codernirdesh/digit-to-words-nepali';
+            pkg.publishConfig = { registry: 'https://npm.pkg.github.com' };
+            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+          "
+
       - name: Publish to GitHub Packages (Dry Run)
         if: github.event.inputs.dry_run == 'true'
         run: |
           echo "🔍 This is a DRY RUN for GitHub Packages - no actual publishing will occur"
-          npm publish --dry-run --access public --registry=https://npm.pkg.github.com/
+          npm publish --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -247,7 +257,7 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         run: |
           echo "🚀 Publishing to GitHub Packages..."
-          npm publish --access public --registry=https://npm.pkg.github.com/
+          npm publish
           echo "✅ Successfully published to GitHub Packages!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
