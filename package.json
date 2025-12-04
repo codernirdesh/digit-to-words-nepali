@@ -1,6 +1,6 @@
 {
   "name": "digit-to-words-nepali",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A comprehensive TypeScript library for converting numbers to words in English and Nepali languages. Supports numbers up to 10^39 (Adanta Singhar), currency formatting, decimal handling with individual digit pronunciation, and BigInt. Zero dependencies, fully tested.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
