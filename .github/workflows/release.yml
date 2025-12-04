@@ -137,6 +137,16 @@ jobs:
           git commit -m "chore(release): bump version to ${{ steps.version.outputs.new_version }}"
           git push origin HEAD
 
+      - name: Delete existing tag (if present)
+        run: |
+          TAG_NAME="v${{ steps.version.outputs.new_version }}"
+          echo "Checking for existing tag: $TAG_NAME"
+          # Delete remote tag if exists
+          git push --delete origin "$TAG_NAME" 2>/dev/null || echo "Remote tag doesn't exist or already deleted"
+          # Delete local tag if exists
+          git tag -d "$TAG_NAME" 2>/dev/null || echo "Local tag doesn't exist or already deleted"
+        continue-on-error: true
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         with:
