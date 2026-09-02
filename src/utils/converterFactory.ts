@@ -1,4 +1,3 @@
-import { ConverterConfig } from '../types/converterTypes';
 import { BaseConverter } from '../converters/baseConverter';
 
 /**

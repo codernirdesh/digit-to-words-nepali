@@ -1,12 +1,18 @@
 import { ConverterConfig, Language, ConversionResult, CustomUnits, CustomScales } from '../types/converterTypes';
 import { WordMapping, NumberScale } from '../types/mappingTypes';
-import { formatWords, formatCurrencyAmount } from '../utils/formatUtils';
-import { validateCustomMappings } from '../utils/validationUtils';
+import {
+  assertWithinSupportedRange,
+  isValidNumber,
+  splitNumber,
+  validateCustomMappings
+} from '../utils/validationUtils';
+import { CacheKey, conversionCache } from '../utils/cacheUtils';
 
 /**
  * BaseConverter
- * Abstract class for number-to-words conversion logic.
- * Handles custom mappings, scale lookups, and large number processing.
+ * Shared number-to-words conversion logic. Subclasses supply the word map and
+ * the scale table; the conversion algorithm itself is identical for every
+ * language, so it lives here.
  */
 export abstract class BaseConverter {
   protected wordCache: Map<number, WordMapping>;
@@ -19,6 +25,90 @@ export abstract class BaseConverter {
     this.scales = [];
     this.customUnits = {};
     this.customScales = {};
+  }
+
+  /**
+   * Convert a number to words in the language given by `config.lang`.
+   */
+  convert(
+    num: number | string | bigint,
+    config: Required<ConverterConfig>
+  ): ConversionResult {
+    this.setCustomMappings(config);
+
+    if (!isValidNumber(num)) {
+      throw new Error('Input must contain only valid digits');
+    }
+
+    const { integer, decimal } = splitNumber(num);
+    assertWithinSupportedRange(integer);
+
+    // Custom mappings are not part of the cache key, so results produced with
+    // them are neither read from nor written to the shared cache.
+    const cacheKey = this.hasCustomMappings(config) ? undefined : this.buildCacheKey(num, config);
+    if (cacheKey) {
+      const cached = conversionCache.get(cacheKey);
+      if (cached) return cached;
+    }
+
+    const words: string[] = [];
+
+    if (integer === 0n) {
+      words.push(this.getWordMapping(0, config.lang));
+    } else {
+      this.processLargeNumber(integer, words, config);
+    }
+
+    // A decimal part that rounds to 00 is omitted entirely.
+    if (config.includeDecimal && decimal) {
+      const decimalNum = parseInt(decimal, 10);
+      if (decimalNum !== 0) {
+        words.push(config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix);
+        if (config.individualDecimalDigits) {
+          for (const digit of decimal) {
+            words.push(this.getWordMapping(Number(digit), config.lang));
+          }
+        } else {
+          words.push(this.getWordMapping(decimalNum, config.lang));
+        }
+      }
+    }
+
+    if (config.isCurrency && config.currency) {
+      words.unshift(config.currency);
+    }
+
+    const result: ConversionResult = {
+      words,
+      meta: {
+        originalNumber: num.toString(),
+        language: config.lang,
+        isCurrency: config.isCurrency
+      }
+    };
+
+    if (cacheKey) {
+      conversionCache.set(cacheKey, result);
+    }
+
+    return result;
+  }
+
+  private hasCustomMappings(config: Required<ConverterConfig>): boolean {
+    return Object.keys(config.units).length > 0 || Object.keys(config.scales).length > 0;
+  }
+
+  private buildCacheKey(num: number | string | bigint, config: Required<ConverterConfig>): CacheKey {
+    return {
+      value: num.toString(),
+      lang: config.lang,
+      isCurrency: config.isCurrency,
+      includeDecimal: config.includeDecimal,
+      individualDecimalDigits: config.individualDecimalDigits,
+      currency: config.currency,
+      decimalSuffix: config.decimalSuffix,
+      currencyDecimalSuffix: config.currencyDecimalSuffix
+    };
   }
 
   /**
@@ -76,7 +166,8 @@ export abstract class BaseConverter {
   ): void {
     if (num === 0n) return;
 
-    // Find largest applicable scale using binary search
+    // `this.scales` is sorted descending, so the leftmost entry that is <= num
+    // is the largest applicable scale.
     let currentScale: NumberScale | undefined;
     let left = 0;
     let right = this.scales.length - 1;
@@ -89,7 +180,7 @@ export abstract class BaseConverter {
         left = mid + 1;
       }
     }
-    
+
     if (!currentScale) {
       // Handle numbers less than smallest scale (100)
       if (num <= 99n) {
@@ -115,20 +206,4 @@ export abstract class BaseConverter {
       this.processLargeNumber(remainder, words, config);
     }
   }
-
-  protected formatResult(
-    words: string[],
-    config: Required<ConverterConfig>
-  ): string {
-    const formatted = formatWords(words);
-    if (config.isCurrency) {
-      return formatCurrencyAmount(formatted, config.currency, config.lang);
-    }
-    return formatted;
-  }
-
-  abstract convert(
-    num: number | string | bigint,
-    config: Required<ConverterConfig>
-  ): ConversionResult;
 }

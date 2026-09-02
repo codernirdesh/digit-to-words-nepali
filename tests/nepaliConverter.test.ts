@@ -443,7 +443,7 @@ describe("Nepali Number to Words Converter", () => {
     });
 
     describe("Maximum Scale Numbers", () => {
-      it("should handle numbers up to Adanta Singhar (10^39)", () => {
+      it("should handle numbers up to Maha Singhar (10^37)", () => {
         const maxNum = BigInt("9".repeat(39));
         const result = digitToNepaliWords(maxNum);
         expect(result).toBe(
@@ -518,9 +518,16 @@ describe("Nepali Number to Words Converter", () => {
       expect(result.endsWith("उनान्सय")).toBe(true);
     });
 
-    it("should throw for numbers larger than 10^39", () => {
-      const tooBig = BigInt("1" + "0".repeat(40));
-      expect(() => digitToNepaliWords(tooBig)).toThrow();
+    it("should name values in the अदन्त सिंघर (10^39) scale", () => {
+      expect(digitToNepaliWords(BigInt("1" + "0".repeat(39)))).toBe("एक अदन्त सिंघर");
+      expect(digitToNepaliWords(BigInt("1" + "0".repeat(40)))).toBe("दश अदन्त सिंघर");
+    });
+
+    it("should throw for numbers larger than 10^41 - 1", () => {
+      const tooBig = BigInt("1" + "0".repeat(41));
+      expect(() => digitToNepaliWords(tooBig)).toThrow(
+        "Input exceeds maximum supported value"
+      );
     });
 
     it("should handle custom units and scales overriding all defaults", () => {
@@ -624,11 +631,11 @@ describe("Nepali Number to Words Converter", () => {
       expect(() => unicodeToEnglishNumber("१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०१२३४५६७८९०")).toThrow();
     });
 
-    it("should throw for numbers with more than 39 digits (ignoring leading zeros)", () => {
-      expect(() => digitToNepaliWords("1".repeat(40))).toThrow("Input exceeds maximum supported value");
-      expect(() => digitToNepaliWords("0".repeat(10) + "1".repeat(39))).not.toThrow();
-      expect(() => digitToNepaliWords("0".repeat(5) + "2".repeat(40))).toThrow("Input exceeds maximum supported value");
-      expect(() => digitToNepaliWords(BigInt("1".repeat(40)))).toThrow("Input exceeds maximum supported value");
+    it("should throw for numbers with more than 41 digits (ignoring leading zeros)", () => {
+      expect(() => digitToNepaliWords("1".repeat(42))).toThrow("Input exceeds maximum supported value");
+      expect(() => digitToNepaliWords("0".repeat(10) + "1".repeat(41))).not.toThrow();
+      expect(() => digitToNepaliWords("0".repeat(5) + "2".repeat(42))).toThrow("Input exceeds maximum supported value");
+      expect(() => digitToNepaliWords(BigInt("1".repeat(42)))).toThrow("Input exceeds maximum supported value");
     });
   });
 });

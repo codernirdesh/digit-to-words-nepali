@@ -1,3 +1,25 @@
+## [Unreleased]
+
+### Fixed
+- Numbers that JavaScript stringifies in exponential notation no longer crash. `digitToNepaliWords(1e21)` previously threw `SyntaxError: Cannot convert 1e+21 to a BigInt`; it now returns `"एक अङ्क"`. The same applies to very small values such as `1e-7`, which correctly round to zero.
+- The upper bound is now enforced for English output too. `digitToEnglishWords("1" + "0".repeat(42))` previously returned a bogus scale phrase instead of throwing.
+- English output now honours the documented zero-decimal rule: `digitToEnglishWords(123.001)` returns `"one hundred twenty three"` rather than `"one hundred twenty three point zero"`.
+- Cached results are copied in and out of `conversionCache`, so mutating a returned `ConversionResult` can no longer corrupt later conversions.
+- `ConversionCache.set` no longer evicts an unrelated entry when overwriting a key that is already cached.
+
+### Changed
+- The English and Nepali converters now share a single implementation in `BaseConverter`, removing ~200 lines of duplicated conversion, caching, and default-config logic. Behaviour for documented cases is unchanged.
+- `MAX_SUPPORTED_INTEGER` is now derived from the scale table rather than hardcoded, so the bound and the table cannot drift apart when a scale is added.
+- `VALID_SCALES` is deprecated in favour of the complete `SCALE_VALUES` table, which is now exported from the package root.
+
+### Added
+- **अदन्त सिंघर / adanta singhar (10^39) added to the scale table.** The README already documented this scale but the code stopped at महासिंघर (10^37), which is why the advertised "up to 10^39" ceiling did not line up. The maximum supported value is now `10^41 - 1` (99 अदन्त सिंघर). This is purely additive — every value that converted before produces identical output; numbers that previously threw now convert.
+- `englishToUnicodeNumber` — converts ASCII digits to Nepali unicode digits.
+- `unicodeToEnglishDigits` — Nepali unicode digits to an ASCII digit string, with no safe-integer limit.
+- Package root now also exports `SCALE_VALUES`, `baseScaleMappings`, `BASE_NUMBERS`, `createNumberWordMap`, `LANGUAGE_DEFAULTS`, `MAX_SUPPORTED_INTEGER`, `isValidNumber`, `ConversionCache`, `NepaliConverter`, and `EnglishConverter`.
+- Source maps and declaration maps are published alongside `dist`.
+- Test suites for the English converter and the utility modules (207 tests, up from 142).
+
 ## [1.0.2] - 2025-12-04
 
 Release via GitHub Actions

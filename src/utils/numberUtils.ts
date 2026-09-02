@@ -14,32 +14,61 @@ const nepaliToEnglishDigitMap: Record<NepaliDigit, EnglishDigit> = Object.fromEn
   Object.entries(digitMap).map(([en, ne]) => [ne, en])
 ) as Record<NepaliDigit, EnglishDigit>;
 
+const NEPALI_DIGITS_ONLY = /^[०-९]+$/;
+const ENGLISH_DIGITS_ONLY = /^\d+$/;
+
 /**
  * Converts a string of Nepali unicode digits (०-९) to a JavaScript number.
  * Throws if input is not a valid Nepali digit string or exceeds safe integer.
+ *
+ * For values beyond `Number.MAX_SAFE_INTEGER`, use
+ * {@link unicodeToEnglishDigits} and pass the resulting string to a converter.
+ *
  * @param numStr Nepali digit string
- * @returns number
  */
 export const unicodeToEnglishNumber = (numStr: string): number => {
-  const DIGIT_REGEX_NEPALI = /^[०-९]+$/;
+  const num = Number(unicodeToEnglishDigits(numStr));
+  if (!Number.isSafeInteger(num)) {
+    throw new Error('Number exceeds maximum safe integer value');
+  }
+  return num;
+};
+
+/**
+ * Converts a string of Nepali unicode digits (०-९) to the equivalent string of
+ * ASCII digits, with no size limit.
+ *
+ * @param numStr Nepali digit string
+ */
+export const unicodeToEnglishDigits = (numStr: string): string => {
   if (typeof numStr !== 'string' || numStr.length === 0) {
     throw new Error('Input must be a non-empty string');
   }
-  if (!DIGIT_REGEX_NEPALI.test(numStr)) {
+  if (!NEPALI_DIGITS_ONLY.test(numStr)) {
     throw new Error('Input must contain only Nepali digits (०-९)');
   }
+
   let englishStr = '';
   for (const char of numStr) {
-    const en = nepaliToEnglishDigitMap[char as NepaliDigit];
-    if (en === undefined) {
-      throw new Error(`Invalid Nepali digit: ${char}`);
-    }
-    englishStr += en;
+    englishStr += nepaliToEnglishDigitMap[char as NepaliDigit];
   }
-  const num = Number(englishStr);
-  if (!Number.isSafeInteger(num)) {
-    throw new Error("Number exceeds maximum safe integer value");
+  return englishStr;
+};
+
+/**
+ * Converts a non-negative integer (or its string form) to Nepali unicode digits.
+ *
+ * @example englishToUnicodeNumber(2081) // "२०८१"
+ */
+export const englishToUnicodeNumber = (num: number | string | bigint): string => {
+  const str = typeof num === 'string' ? num.trim() : num.toString();
+  if (!ENGLISH_DIGITS_ONLY.test(str)) {
+    throw new Error('Input must contain only digits (0-9)');
   }
 
-  return num;
+  let nepaliStr = '';
+  for (const char of str) {
+    nepaliStr += digitMap[char as EnglishDigit];
+  }
+  return nepaliStr;
 };

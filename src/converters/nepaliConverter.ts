@@ -1,17 +1,16 @@
 import { BaseConverter } from './baseConverter';
-import { ConverterConfig, ConversionResult } from '../types/converterTypes';
-import { isValidNumber, splitNumber } from '../utils/validationUtils';
+import { ConverterConfig } from '../types/converterTypes';
 import { nepaliScaleMappings } from '../mappings/scaleMappings';
 import { createNumberWordMap } from '../mappings/numberMappings';
-
 import { digitToEnglishWords } from './englishConverter';
-import { conversionCache } from '../utils/cacheUtils';
 import { ConverterFactory } from '../utils/converterFactory';
+import { resolveConfig } from '../utils/configUtils';
+import { formatWords } from '../utils/formatUtils';
 
 /**
  * NepaliConverter
- * Converts numbers to Nepali words with support for currency, decimals, and custom mappings.
- * Optimized for readability, maintainability, and performance.
+ * Converts numbers to Nepali words using the Nepali/Indian scale system
+ * (हजार, लाख, करोड, अरब, ...).
  */
 export class NepaliConverter extends BaseConverter {
   constructor() {
@@ -19,190 +18,25 @@ export class NepaliConverter extends BaseConverter {
     this.wordCache = createNumberWordMap();
     this.scales = nepaliScaleMappings;
   }
-
-  /**
-   * Convert decimal digits individually to Nepali words.
-   * @param decimal - The decimal string (e.g., "33")
-   * @param config - Conversion configuration
-   * @returns Array of individual digit words
-   */
-  private convertDecimalDigitsIndividually(decimal: string, config: Required<ConverterConfig>): string[] {
-    const digits = decimal.split('');
-    const words: string[] = [];
-    
-    for (const digit of digits) {
-      const digitNum = parseInt(digit);
-      words.push(this.getWordMapping(digitNum, config.lang));
-    }
-    
-    return words;
-  }
-
-  /**
-   * Convert a number to Nepali words.
-   * @param num - The number to convert
-   * @param config - Conversion configuration (all fields required)
-   */
-  convert(
-    num: number | string | bigint,
-    config: Required<ConverterConfig>
-  ): ConversionResult {
-    this.setCustomMappings(config);
-
-    // Validate input
-    if (!isValidNumber(num)) {
-      throw new Error('Input must contain only valid digits');
-    }
-
-    // Use cache if no custom mappings
-    const hasCustomMappings = Object.keys(config.units).length > 0 || Object.keys(config.scales).length > 0;
-    if (!hasCustomMappings) {
-      const cacheKey = {
-        value: num.toString(),
-        lang: config.lang,
-        isCurrency: config.isCurrency,
-        includeDecimal: config.includeDecimal,
-        individualDecimalDigits: config.individualDecimalDigits,
-        currency: config.currency,
-        decimalSuffix: config.decimalSuffix,
-        currencyDecimalSuffix: config.currencyDecimalSuffix
-      };
-      const cachedResult = conversionCache.get(cacheKey);
-      if (cachedResult) return cachedResult;
-    }
-
-    // Split number into integer and decimal parts
-    const { integer, decimal } = splitNumber(num);
-
-    // Enforce maximum supported value (10^39 - 1) and max length (39 digits)
-    const MAX_SUPPORTED = BigInt('9'.repeat(39));
-    const intStr = integer.toString().replace(/^0+/, '') || '0';
-    if (integer > MAX_SUPPORTED || intStr.length > 39) {
-      throw new Error('Input exceeds maximum supported value (10^39 - 1)');
-    }
-
-    const words: string[] = [];
-    // Determine if input is zero or a fraction (e.g., 0.01)
-    const isZeroOrFraction = (typeof num === 'bigint' ? num === 0n : parseFloat(num.toString()) < 1 && parseFloat(num.toString()) > -1);
-
-    // Integer part conversion
-    if (integer === 0n) {
-      // Add "zero" if the original number was effectively zero before the decimal,
-      // or if there's no decimal part.
-      if (isZeroOrFraction || !decimal) {
-        // Only add zero if the decimal part isn't going to represent the only value (e.g., 0.01)
-        if (!decimal || parseInt(decimal || '0') === 0) {
-          words.push(this.getWordMapping(0, config.lang));
-        }
-      }
-    } else {
-      this.processLargeNumber(integer, words, config);
-    }
-
-    // Decimal part conversion
-    if (config.includeDecimal && decimal) {
-      const decimalNum = parseInt(decimal || '0');
-      // Only add decimal suffix and value if the decimal part is non-zero
-      if (decimalNum !== 0) {
-        // If the integer part was zero, add it now before the decimal.
-        if (integer === 0n && words.length === 0) {
-           words.push(this.getWordMapping(0, config.lang));
-        }
-        words.push(config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix);
-        
-        // Use individual digits for non-currency or when explicitly configured
-        if (config.individualDecimalDigits) {
-          const individualDigits = this.convertDecimalDigitsIndividually(decimal, config);
-          words.push(...individualDigits);
-        } else {
-          words.push(this.getWordMapping(decimalNum, config.lang));
-        }
-      } else if (integer === 0n && words.length === 0) {
-        // If integer was 0 and decimal rounded to 0, ensure "zero" is output
-        words.push(this.getWordMapping(0, config.lang));
-      }
-    }
-
-    // Add currency prefix if needed and if currency string is not empty
-    if (config.isCurrency && config.currency) {
-       // Always add currency prefix if isCurrency is true, unless the result is empty (which shouldn't happen now)
-       if (words.length > 0) {
-          words.unshift(config.currency);
-       } else {
-         // If somehow words is empty, output "Currency Zero"
-         words.push(config.currency, this.getWordMapping(0, config.lang));
-       }
-    }
-
-    // Final check: if words array is empty (e.g., input was 0.000), add zero.
-    // This might be redundant now but serves as a safeguard.
-    if (words.length === 0) {
-       words.push(this.getWordMapping(0, config.lang));
-    }
-    
-    const result: ConversionResult = {
-      words,
-      meta: {
-        originalNumber: num.toString(),
-        language: config.lang,
-        isCurrency: config.isCurrency
-      }
-    };
-    
-    // Store in cache if no custom mappings
-    if (!hasCustomMappings) {
-      const cacheKey = {
-        value: num.toString(),
-        lang: config.lang,
-        isCurrency: config.isCurrency,
-        includeDecimal: config.includeDecimal,
-        individualDecimalDigits: config.individualDecimalDigits,
-        currency: config.currency,
-        decimalSuffix: config.decimalSuffix,
-        currencyDecimalSuffix: config.currencyDecimalSuffix
-      };
-      conversionCache.set(cacheKey, result);
-    }
-    
-    return result;
-  }
 }
 
+/**
+ * Convert a number to Nepali words. Pass `{ lang: "en" }` to get English output
+ * from the same scale system.
+ *
+ * @param num - Non-negative number, numeric string, or bigint (up to 10^39 - 1)
+ * @param config - Optional conversion settings
+ */
 export const digitToNepaliWords = (
   num: number | string | bigint,
   config: Partial<ConverterConfig> = {}
 ): string => {
-  // If lang is 'en', delegate to EnglishConverter for API consistency
+  // Delegate to the English converter so both entry points share defaults.
   if (config.lang === 'en') {
     return digitToEnglishWords(num, config);
   }
-  // Use the converter factory to get a singleton instance
+
   const converter = ConverterFactory.getInstance('NepaliConverter', () => new NepaliConverter());
-  
-  // Set default language-specific config before merging user config
-  const langDefaults = {
-    currency: 'रुपैयाँ',
-    decimalSuffix: 'दशमलव',
-    currencyDecimalSuffix: 'पैसा',
-  };
-
-  const defaultConfig: Required<ConverterConfig> = {
-    lang: 'ne',
-    isCurrency: false,
-    includeDecimal: true,
-    individualDecimalDigits: true, // Default to individual digits
-    units: {},
-    scales: {},
-    ...langDefaults, // Apply language defaults
-    ...config // User config overrides defaults
-  };
-
-  // Override individualDecimalDigits based on currency setting if not explicitly set
-  if (config.individualDecimalDigits === undefined) {
-    defaultConfig.individualDecimalDigits = !defaultConfig.isCurrency;
-  }
-
-  const result = converter.convert(num, defaultConfig);
-  // Filter out empty strings that might result from empty currency/decimal suffixes
-  return result.words.filter((word: string) => word !== '').join(' ').trim();
+  const result = converter.convert(num, resolveConfig('ne', config));
+  return formatWords(result.words);
 };

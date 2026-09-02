@@ -5,6 +5,7 @@ import { NumberScale } from '../types/mappingTypes';
  * Maps scale names to their BigInt values for Nepali/Indian number system.
  */
 const SCALE_VALUES = {
+  ADANTA_SINGHAR: 10n ** 39n,
   MAHA_SINGHAR: 10n ** 37n,
   SINGHAR: 10n ** 35n,
   SHISHANT: 10n ** 33n,
@@ -31,7 +32,11 @@ const SCALE_VALUES = {
  * List of all supported number scales, sorted descending by value.
  */
 export const baseScaleMappings: NumberScale[] = [
-  { 
+  {
+    value: SCALE_VALUES.ADANTA_SINGHAR,
+    names: { en: 'adanta singhar', ne: 'अदन्त सिंघर' }
+  },
+  {
     value: SCALE_VALUES.MAHA_SINGHAR,
     names: { en: 'maha singhar', ne: 'महासिंघर' }
   },

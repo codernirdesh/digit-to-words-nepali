@@ -6,13 +6,14 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/index.ts',
+    '!src/types/**',
   ],
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 80,
-      statements: 75,
+      branches: 85,
+      functions: 90,
+      lines: 90,
+      statements: 90,
     },
   },
 };

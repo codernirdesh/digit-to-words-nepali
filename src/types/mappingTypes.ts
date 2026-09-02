@@ -47,7 +47,11 @@ export type MappableNumbers = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
   91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99;
 
 /**
- * Valid scale values for the Nepali/Indian number system
+ * A subset of the scale values, kept for backwards compatibility.
+ *
+ * @deprecated This lists only the scales up to शंख (10^17). Import
+ * `SCALE_VALUES` instead for the complete table up to महासिंघर (10^37) — that
+ * is the table the converters and custom-scale validation actually use.
  */
 export const VALID_SCALES = {
   HUNDRED: 100n,

@@ -1,11 +1,11 @@
 # digit-to-words-nepali
 
-A TypeScript library to convert numbers into their word representations in English and Nepali languages. Supports numbers up to Adanta Singhar (10^39) with extensive currency and decimal formatting options.
+A TypeScript library to convert numbers into their word representations in English and Nepali languages. Supports every non-negative number up to `10^41 - 1` (99 अदन्त सिंघर / adanta singhar) with extensive currency and decimal formatting options.
 
 ## Features
 
 - Convert numbers to words in English and Nepali languages
-- Support for numbers up to `999...9` (39 nines), effectively `10^39 - 1`. Throws error for larger numbers or inputs with more than 39 digits (ignoring leading zeros).
+- Support for numbers up to `999...9` (41 nines), effectively `10^41 - 1`. Throws an error for larger numbers or inputs with more than 41 digits (ignoring leading zeros).
 - Native BigInt support for large numbers
 - High-performance optimizations:
   - LRU caching for frequently converted values
@@ -15,9 +15,27 @@ A TypeScript library to convert numbers into their word representations in Engli
 - Decimal number handling with configurable formats and refined rounding/zero logic
 - **Individual decimal digit pronunciation**: Choose between individual digits ("तीन तीन") or combined numbers ("तेत्तिस") for decimal places
 - Language-specific defaults
+- Accepts `number`, numeric `string`, and `bigint` — including values JavaScript prints in exponential notation (`1e21`)
+- Nepali ↔ ASCII digit transliteration helpers
 - Zero external dependencies
 - Strict input validation
 - Fully tested with comprehensive test cases
+
+### Digit transliteration
+
+```typescript
+import {
+  englishToUnicodeNumber,
+  unicodeToEnglishNumber,
+  unicodeToEnglishDigits,
+} from "digit-to-words-nepali";
+
+englishToUnicodeNumber(2081);        // "२०८१"
+unicodeToEnglishNumber("२०८१");      // 2081
+
+// For values beyond Number.MAX_SAFE_INTEGER, keep them as a string:
+unicodeToEnglishDigits("९".repeat(30)); // "999999999999999999999999999999"
+```
 
 ## Installation
 
@@ -80,16 +98,20 @@ digitToNepaliWords(BigInt("1234567890000"));
 digitToNepaliWords(BigInt("1" + "0".repeat(15)));
 // Output: "एक पद्म"
 
-// Maximum supported number (39 nines)
-const maxSupported = BigInt("9".repeat(39));
-digitToNepaliWords(maxSupported);
-// Output: "उनान्सय महासिंघर उनान्सय सिंघर ... नौ सय उनान्सय"
+// Top of the scale table (10^39)
+digitToNepaliWords(BigInt("1" + "0".repeat(39)));
+// Output: "एक अदन्त सिंघर"
 
-// Numbers larger than 10^39 - 1 will throw an error
+// Maximum supported number (41 nines)
+const maxSupported = BigInt("9".repeat(41));
+digitToNepaliWords(maxSupported);
+// Output: "उनान्सय अदन्त सिंघर उनान्सय महासिंघर ... नौ सय उनान्सय"
+
+// Numbers larger than 10^41 - 1 will throw an error
 try {
-  digitToNepaliWords(BigInt("1" + "0".repeat(39))); // 1 followed by 39 zeros
+  digitToNepaliWords(BigInt("1" + "0".repeat(41))); // 1 followed by 41 zeros
 } catch (e) {
-  console.error(e.message); // Output: Input exceeds maximum supported value (10^39 - 1)
+  console.error(e.message); // Output: Input exceeds maximum supported value (10^41 - 1)
 }
 
 // Complex large number with English output
@@ -345,7 +367,7 @@ digitToNepaliWords(1234, {
 
 ## Number Scale Support
 
-The library supports numbers up to `10^39 - 1`. Here's the complete scale used:
+The library supports numbers up to `10^41 - 1` — that is, up to 99 of the largest scale below. Here's the complete scale used:
 
 | Power | English        | Nepali      | Example                                                     |
 | ----- | -------------- | ----------- | ----------------------------------------------------------- |

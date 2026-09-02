@@ -1,16 +1,18 @@
 {
   "name": "digit-to-words-nepali",
   "version": "1.0.2",
-  "description": "A comprehensive TypeScript library for converting numbers to words in English and Nepali languages. Supports numbers up to 10^39 (Adanta Singhar), currency formatting, decimal handling with individual digit pronunciation, and BigInt. Zero dependencies, fully tested.",
+  "description": "A comprehensive TypeScript library for converting numbers to words in English and Nepali languages. Supports every non-negative number up to 10^41 - 1 (99 Adanta Singhar), currency formatting, decimal handling with individual digit pronunciation, and BigInt. Zero dependencies, fully tested.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist coverage",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
     "prepare": "npm run build",
-    "start": "node dist/index.js",
-    "prepublishOnly": "npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "digit",
@@ -42,6 +44,7 @@
   },
   "files": [
     "dist",
+    "src",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
@@ -49,5 +52,9 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=14"
   }
 }

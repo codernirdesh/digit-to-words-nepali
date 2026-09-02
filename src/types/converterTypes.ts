@@ -1,5 +1,3 @@
-import { MappableNumbers, ScaleValues, CustomMapping } from './mappingTypes';
-
 /**
  * Supported languages for conversion output
  */

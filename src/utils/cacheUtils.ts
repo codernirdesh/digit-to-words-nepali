@@ -5,7 +5,7 @@
 import { ConversionResult } from '../types/converterTypes';
 
 // CacheKey includes all factors affecting the conversion result
-type CacheKey = {
+export type CacheKey = {
   value: string;
   lang: string;
   isCurrency: boolean;
@@ -28,6 +28,12 @@ const createCacheKey = (key: CacheKey): string => [
   key.currencyDecimalSuffix || ''
 ].join('|');
 
+// Callers receive their own copy so that mutating a result cannot corrupt the cache.
+const cloneResult = (result: ConversionResult): ConversionResult => ({
+  words: [...result.words],
+  meta: { ...result.meta }
+});
+
 /**
  * LRU Cache for conversion results
  */
@@ -36,39 +42,44 @@ export class ConversionCache {
   private readonly maxSize: number;
 
   constructor(maxSize: number = 1000) {
+    if (!Number.isInteger(maxSize) || maxSize < 1) {
+      throw new Error('Cache maxSize must be a positive integer');
+    }
     this.cache = new Map();
     this.maxSize = maxSize;
   }
 
   /**
-   * Get cached result, implementing LRU behavior.
+   * Get a copy of the cached result, refreshing its LRU position.
    */
   get(key: CacheKey): ConversionResult | undefined {
     const cacheKey = createCacheKey(key);
     const result = this.cache.get(cacheKey);
-    
+    if (!result) return undefined;
+
     // Move to end of Map to implement LRU behavior
-    if (result) {
-      this.cache.delete(cacheKey);
-      this.cache.set(cacheKey, result);
-    }
-    return result;
+    this.cache.delete(cacheKey);
+    this.cache.set(cacheKey, result);
+    return cloneResult(result);
   }
 
   /**
-   * Set cached result, evicting oldest if necessary.
+   * Store a result, evicting the least recently used entry when full.
    */
   set(key: CacheKey, result: ConversionResult): void {
     const cacheKey = createCacheKey(key);
-    
-    // Ensure cache doesn't exceed max size by removing oldest entry
-    if (this.cache.size >= this.maxSize) {
+
+    // Overwriting an existing key does not grow the cache, so only evict when
+    // inserting a genuinely new entry would exceed the limit.
+    if (this.cache.has(cacheKey)) {
+      this.cache.delete(cacheKey);
+    } else if (this.cache.size >= this.maxSize) {
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey !== undefined) {
         this.cache.delete(oldestKey);
       }
     }
-    this.cache.set(cacheKey, result);
+    this.cache.set(cacheKey, cloneResult(result));
   }
 
   /**
