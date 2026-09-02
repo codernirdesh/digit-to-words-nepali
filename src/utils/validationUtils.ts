@@ -85,6 +85,11 @@ export function assertWithinSupportedRange(integer: bigint): void {
 export function splitNumber(num: number | string | bigint): {
   integer: bigint;
   decimal?: string;
+  /**
+   * How many decimal digits the caller actually wrote, capped at 2. Used to
+   * decide whether a trailing zero in `decimal` is a real digit or padding.
+   */
+  decimalDigits?: number;
 } {
   if (typeof num === 'bigint') return { integer: num };
 
@@ -94,6 +99,8 @@ export function splitNumber(num: number | string | bigint): {
 
   // If no decimal part, return only integer
   if (!decPart) return { integer };
+
+  const decimalDigits = Math.min(decPart.length, 2);
 
   // Pad to 3 decimal places, then take first 3 digits for precision
   const decimalStr = decPart.padEnd(3, '0').slice(0, 3);
@@ -109,7 +116,8 @@ export function splitNumber(num: number | string | bigint): {
 
   return {
     integer,
-    decimal: rounded.toString().padStart(2, '0')
+    decimal: rounded.toString().padStart(2, '0'),
+    decimalDigits
   };
 }
 

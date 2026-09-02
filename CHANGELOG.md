@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **Individual-digit decimal mode no longer speaks a padding zero.** `digitToNepaliWords(1.5)` returned `"एक दशमलव पाँच शून्य"` ("one point five zero"); it now returns `"एक दशमलव पाँच"`. When digits are read one by one, a zero the caller never wrote should not be spoken. A zero that *was* written is still kept, in either position — `1.05` → `"शून्य पाँच"`, `"1.50"` → `"पाँच शून्य"`. Combined mode is deliberately unaffected: there the decimal is read as a quantity, so `1.5` correctly stays `"पचास"` / 50 paisa. This keys on `individualDecimalDigits`, not `isCurrency`, so it also fixes currency when that flag is forced on. Set `padDecimalDigits: true` to restore the old output.
 - Numbers that JavaScript stringifies in exponential notation no longer crash. `digitToNepaliWords(1e21)` previously threw `SyntaxError: Cannot convert 1e+21 to a BigInt`; it now returns `"एक अङ्क"`. The same applies to very small values such as `1e-7`, which correctly round to zero.
 - The upper bound is now enforced for English output too. `digitToEnglishWords("1" + "0".repeat(42))` previously returned a bogus scale phrase instead of throwing.
 - English output now honours the documented zero-decimal rule: `digitToEnglishWords(123.001)` returns `"one hundred twenty three"` rather than `"one hundred twenty three point zero"`.
@@ -13,12 +14,13 @@
 - `VALID_SCALES` is deprecated in favour of the complete `SCALE_VALUES` table, which is now exported from the package root.
 
 ### Added
+- `padDecimalDigits` config option — restores the pre-existing padded output in individual-digit mode. Ignored in combined mode, where padding is required for correctness.
 - **अदन्त सिंघर / adanta singhar (10^39) added to the scale table.** The README already documented this scale but the code stopped at महासिंघर (10^37), which is why the advertised "up to 10^39" ceiling did not line up. The maximum supported value is now `10^41 - 1` (99 अदन्त सिंघर). This is purely additive — every value that converted before produces identical output; numbers that previously threw now convert.
 - `englishToUnicodeNumber` — converts ASCII digits to Nepali unicode digits.
 - `unicodeToEnglishDigits` — Nepali unicode digits to an ASCII digit string, with no safe-integer limit.
 - Package root now also exports `SCALE_VALUES`, `baseScaleMappings`, `BASE_NUMBERS`, `createNumberWordMap`, `LANGUAGE_DEFAULTS`, `MAX_SUPPORTED_INTEGER`, `isValidNumber`, `ConversionCache`, `NepaliConverter`, and `EnglishConverter`.
 - Source maps and declaration maps are published alongside `dist`.
-- Test suites for the English converter and the utility modules (207 tests, up from 142).
+- Test suites for the English converter and the utility modules (213 tests, up from 142).
 
 ## [1.0.2] - 2025-12-04
 

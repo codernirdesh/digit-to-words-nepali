@@ -181,25 +181,44 @@ digitToNepaliWords(1.23, {
 
 The library follows these rules for decimal places:
 
-1.  **Rounding**: If there are more than 2 decimal places, the number is rounded to 2 decimal places using standard rounding rules (>= .005 rounds up).
+1.  **Rounding**: If there are more than 2 decimal places, the number is rounded to 2 decimal places using standard rounding rules (>= .005 rounds up). The examples below use the default individual-digit mode.
     ```typescript
     digitToNepaliWords(1.567, { includeDecimal: true })
-    // => "एक दशमलव सन्ताउन्न"  (rounds to 1.57)
+    // => "एक दशमलव पाँच सात"  (rounds to 1.57)
 
     digitToNepaliWords(1.999, { includeDecimal: true })
     // => "दुई"  (rounds to 2.00)
 
     digitToNepaliWords(0.009, { includeDecimal: true })
-    // => "शून्य दशमलव एक" (rounds to 0.01)
+    // => "शून्य दशमलव शून्य एक" (rounds to 0.01)
 
     digitToNepaliWords(0.001, { includeDecimal: true })
     // => "शून्य" (rounds to 0.00)
     ```
 
-2.  **Padding**: Single decimal digits are padded with a zero *after* rounding.
+2.  **Padding**: Whether a single decimal digit is padded to two depends on how the decimal is being read.
+
+    In **combined** mode the decimal is a *quantity*, so padding is what makes it correct — `1.5` really is fifty hundredths, or 50 paisa:
+    ```typescript
+    digitToNepaliWords(1.5, { includeDecimal: true, individualDecimalDigits: false })
+    // => "एक दशमलव पचास"  (1.50)
+
+    digitToNepaliWords(1.5, { includeDecimal: true, isCurrency: true })
+    // => "रुपैयाँ एक पैसा पचास"  (50 paisa)
+    ```
+
+    In **individual** mode digits are read one by one, so a zero you never wrote is not spoken:
     ```typescript
     digitToNepaliWords(1.5, { includeDecimal: true })
-    // => "एक दशमलव पचास"  (pads to 1.50)
+    // => "एक दशमलव पाँच"
+
+    // A zero you did write is kept, in either position:
+    digitToNepaliWords("1.50", { includeDecimal: true }) // => "एक दशमलव पाँच शून्य"
+    digitToNepaliWords(1.05, { includeDecimal: true })   // => "एक दशमलव शून्य पाँच"
+
+    // Set padDecimalDigits to restore the padded output:
+    digitToNepaliWords(1.5, { includeDecimal: true, padDecimalDigits: true })
+    // => "एक दशमलव पाँच शून्य"
     ```
 
 3.  **Zero Decimals**: If the decimal part becomes `00` after rounding, it is omitted from the output unless the integer part is also zero.
@@ -271,6 +290,7 @@ interface ConverterConfig {
   isCurrency?: boolean;         // Format as currency (default: false)
   includeDecimal?: boolean;     // Include decimal part (default: true)
   individualDecimalDigits?: boolean; // Spell decimal digits individually (default: true for non-currency, false for currency)
+  padDecimalDigits?: boolean;   // Pad a single decimal digit to two when spelling individually (default: false; ignored in combined mode)
   currency?: string;            // Custom currency text (empty string omits prefix)
   decimalSuffix?: string;       // Custom decimal suffix (empty string omits suffix)
   currencyDecimalSuffix?: string; // Custom currency decimal suffix (empty string omits suffix)
@@ -333,14 +353,27 @@ digitToNepaliWords(1234, {
     // => "एक दशमलव तेत्तिस"
     ```
 
-2.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
-2.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 39-digit limit), use `BigInt` strings or `BigInt` literals:
+2.  **Decimal padding in individual-digit mode**: a single decimal digit is no longer padded with a spoken zero. If you depended on the padded output, set `padDecimalDigits: true`:
+    ```typescript
+    // Old behavior
+    digitToNepaliWords(1.5) // => "एक दशमलव पाँच शून्य"
+
+    // New behavior
+    digitToNepaliWords(1.5) // => "एक दशमलव पाँच"
+
+    // To get the old behavior back
+    digitToNepaliWords(1.5, { padDecimalDigits: true })
+    // => "एक दशमलव पाँच शून्य"
+    ```
+    Combined mode (including the currency default) is unaffected — there the decimal is read as a quantity, so `1.5` stays "पचास" / 50 paisa.
+
+3.  For large numbers (> `Number.MAX_SAFE_INTEGER` or near the 41-digit limit), use `BigInt` strings or `BigInt` literals:
     ```typescript
     digitToNepaliWords(BigInt("12345678901234567890")); // Use BigInt
-    digitToNepaliWords("9".repeat(39)); // Use string for max value
+    digitToNepaliWords("9".repeat(41)); // Use string for max value
     ```
 
-3.  Handle potential errors, especially for invalid inputs or numbers exceeding the maximum supported value:
+4.  Handle potential errors, especially for invalid inputs or numbers exceeding the maximum supported value:
     ```typescript
     try {
       // These will throw errors
@@ -349,13 +382,13 @@ digitToNepaliWords(1234, {
       digitToNepaliWords("1.2a");      // Invalid decimal
       digitToNepaliWords(NaN);         // NaN
       digitToNepaliWords(Infinity);    // Infinity
-      digitToNepaliWords("1".repeat(40)); // Exceeds max length/value
+      digitToNepaliWords("1".repeat(42)); // Exceeds max length/value
     } catch (error) {
       console.error(error.message);
     }
     ```
 
-4.  For currency values, typically set both flags:
+5.  For currency values, typically set both flags:
     ```typescript
     digitToNepaliWords(amount, {
       isCurrency: true,
@@ -363,7 +396,7 @@ digitToNepaliWords(1234, {
     });
     ```
 
-5.  The library relies on standard `parseFloat` and `BigInt` behavior for parsing strings. Ensure your string inputs are valid representations.
+6.  The library accepts `number`, numeric `string`, and `bigint`. Values JavaScript prints in exponential notation (`1e21`) are expanded before parsing, so they convert correctly.
 
 ## Number Scale Support
 

@@ -40,7 +40,7 @@ export abstract class BaseConverter {
       throw new Error('Input must contain only valid digits');
     }
 
-    const { integer, decimal } = splitNumber(num);
+    const { integer, decimal, decimalDigits } = splitNumber(num);
     assertWithinSupportedRange(integer);
 
     // Custom mappings are not part of the cache key, so results produced with
@@ -65,10 +65,17 @@ export abstract class BaseConverter {
       if (decimalNum !== 0) {
         words.push(config.isCurrency ? config.currencyDecimalSuffix : config.decimalSuffix);
         if (config.individualDecimalDigits) {
-          for (const digit of decimal) {
+          // Digits are read one by one, so a zero the caller never wrote must
+          // not be spoken: 1.5 is "point five", not "point five zero".
+          const spoken = config.padDecimalDigits
+            ? decimal
+            : decimal.slice(0, decimalDigits ?? decimal.length);
+          for (const digit of spoken) {
             words.push(this.getWordMapping(Number(digit), config.lang));
           }
         } else {
+          // Combined mode reads the decimal as a quantity, where the padding is
+          // what makes it correct: 1.5 really is fifty hundredths.
           words.push(this.getWordMapping(decimalNum, config.lang));
         }
       }
@@ -105,6 +112,7 @@ export abstract class BaseConverter {
       isCurrency: config.isCurrency,
       includeDecimal: config.includeDecimal,
       individualDecimalDigits: config.individualDecimalDigits,
+      padDecimalDigits: config.padDecimalDigits,
       currency: config.currency,
       decimalSuffix: config.decimalSuffix,
       currencyDecimalSuffix: config.currencyDecimalSuffix

@@ -50,8 +50,31 @@ describe("English Number to Words Converter", () => {
       );
     });
 
-    it("pads a single decimal digit to two places", () => {
-      expect(digitToEnglishWords(1.5)).toBe("one point five zero");
+    it("does not speak a padding zero the caller never wrote", () => {
+      expect(digitToEnglishWords(1.5)).toBe("one point five");
+      expect(digitToEnglishWords("1.50")).toBe("one point five zero");
+      expect(digitToEnglishWords(1.05)).toBe("one point zero five");
+    });
+
+    it("restores the padded output via padDecimalDigits", () => {
+      expect(digitToEnglishWords(1.5, { padDecimalDigits: true })).toBe(
+        "one point five zero"
+      );
+    });
+
+    it("still pads in combined mode, where the decimal is a quantity", () => {
+      expect(digitToEnglishWords(1.5, { individualDecimalDigits: false })).toBe(
+        "one point fifty"
+      );
+      expect(digitToEnglishWords(1.5, { isCurrency: true })).toBe(
+        "Dollars one cents fifty"
+      );
+    });
+
+    it("applies the same rule to currency in individual-digit mode", () => {
+      expect(
+        digitToEnglishWords(1.5, { isCurrency: true, individualDecimalDigits: true })
+      ).toBe("Dollars one cents five");
     });
 
     it("rounds to two decimal places", () => {

@@ -21,6 +21,11 @@ export const LANGUAGE_DEFAULTS: Record<Language, LanguageConfig> = {
  *
  * `individualDecimalDigits` defaults to `true` for plain numbers and `false`
  * for currency, unless the caller sets it explicitly.
+ *
+ * `padDecimalDigits` defaults to `false`: when digits are spelled out one by
+ * one, `1.5` reads "one point five", not "one point five zero". It has no
+ * effect in combined mode, where the decimal is read as a quantity and must be
+ * padded to be correct (`1.5` really is fifty hundredths).
  */
 export function resolveConfig(
   lang: Language,
@@ -31,6 +36,7 @@ export function resolveConfig(
     isCurrency: false,
     includeDecimal: true,
     individualDecimalDigits: true,
+    padDecimalDigits: false,
     units: {},
     scales: {},
     ...LANGUAGE_DEFAULTS[lang],

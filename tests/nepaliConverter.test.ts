@@ -226,7 +226,7 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           lang: "ne"
         });
-        expect(result).toBe("एक दशमलव पाँच शून्य");
+        expect(result).toBe("एक दशमलव पाँच");
       });
 
       it("should handle zero decimal part", () => {
@@ -250,7 +250,7 @@ describe("Nepali Number to Words Converter", () => {
           includeDecimal: true,
           decimalSuffix: "point"
         });
-        expect(result).toBe("एक point पाँच शून्य");
+        expect(result).toBe("एक point पाँच");
       });
 
       it("should round long decimals to 2 places with individual digits", () => {
@@ -261,12 +261,34 @@ describe("Nepali Number to Words Converter", () => {
         expect(result).toBe("एक दशमलव दुई चार");
       });
 
-      it("should pad single decimal digit with individual digits", () => {
+      it("should not speak a padding zero the caller never wrote", () => {
+        expect(digitToNepaliWords(1.5, { includeDecimal: true, lang: "ne" }))
+          .toBe("एक दशमलव पाँच");
+        // A zero the caller did write is kept, in either position.
+        expect(digitToNepaliWords("1.50", { includeDecimal: true, lang: "ne" }))
+          .toBe("एक दशमलव पाँच शून्य");
+        expect(digitToNepaliWords(1.05, { includeDecimal: true, lang: "ne" }))
+          .toBe("एक दशमलव शून्य पाँच");
+      });
+
+      it("should restore the padded output via padDecimalDigits", () => {
         const result = digitToNepaliWords(1.5, {
           includeDecimal: true,
+          padDecimalDigits: true,
           lang: "ne"
         });
         expect(result).toBe("एक दशमलव पाँच शून्य");
+      });
+
+      it("should apply the same rule to currency in individual-digit mode", () => {
+        expect(
+          digitToNepaliWords(1.5, {
+            isCurrency: true,
+            individualDecimalDigits: true,
+            includeDecimal: true,
+            lang: "ne"
+          })
+        ).toBe("रुपैयाँ एक पैसा पाँच");
       });
 
       it("should allow forcing combined decimal digits for non-currency", () => {

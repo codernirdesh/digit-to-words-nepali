@@ -24,6 +24,7 @@ export interface ConverterConfig {
   decimalSuffix?: string;             // Custom decimal suffix
   currencyDecimalSuffix?: string;     // Custom currency decimal suffix
   individualDecimalDigits?: boolean;  // Spell decimal digits individually (default: true for non-currency)
+  padDecimalDigits?: boolean;         // Pad a single decimal digit to two when spelling individually (default: false)
   units?: CustomUnits;                // Custom number word overrides
   scales?: CustomScales;              // Custom scale word overrides
 }

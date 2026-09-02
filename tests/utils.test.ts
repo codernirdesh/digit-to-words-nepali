@@ -65,9 +65,18 @@ describe("splitNumber", () => {
   });
 
   it("splits and rounds decimals to two places", () => {
-    expect(splitNumber(1.5)).toEqual({ integer: 1n, decimal: "50" });
-    expect(splitNumber("1.567")).toEqual({ integer: 1n, decimal: "57" });
-    expect(splitNumber(1.001)).toEqual({ integer: 1n, decimal: "00" });
+    expect(splitNumber(1.5)).toEqual({ integer: 1n, decimal: "50", decimalDigits: 1 });
+    expect(splitNumber("1.567")).toEqual({ integer: 1n, decimal: "57", decimalDigits: 2 });
+    expect(splitNumber(1.001)).toEqual({ integer: 1n, decimal: "00", decimalDigits: 2 });
+  });
+
+  it("reports how many decimal digits the caller actually wrote, capped at 2", () => {
+    expect(splitNumber(1.5).decimalDigits).toBe(1);
+    expect(splitNumber("1.50").decimalDigits).toBe(2);
+    expect(splitNumber(1.05).decimalDigits).toBe(2);
+    expect(splitNumber("1.5678").decimalDigits).toBe(2);
+    expect(splitNumber(5).decimalDigits).toBeUndefined();
+    expect(splitNumber(5n).decimalDigits).toBeUndefined();
   });
 
   it("carries a decimal rounding up to 1.00 into the integer", () => {
