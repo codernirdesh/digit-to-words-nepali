@@ -6,6 +6,7 @@
 - The upper bound is now enforced for English output too. `digitToEnglishWords("1" + "0".repeat(42))` previously returned a bogus scale phrase instead of throwing.
 - English output now honours the documented zero-decimal rule: `digitToEnglishWords(123.001)` returns `"one hundred twenty three"` rather than `"one hundred twenty three point zero"`.
 - Cached results are copied in and out of `conversionCache`, so mutating a returned `ConversionResult` can no longer corrupt later conversions.
+- Exported lookup tables are frozen at runtime. `BASE_NUMBERS` can no longer be mutated with `set`/`delete`/`clear`, its nested word objects are frozen, and `baseScaleMappings` / `nepaliScaleMappings` / `englishScaleMappings` / `SCALE_VALUES` are frozen so a consumer cannot change converter output by editing shared tables. `createNumberWordMap()` still returns a deep copy that is safe to mutate.
 - `ConversionCache.set` no longer evicts an unrelated entry when overwriting a key that is already cached.
 
 ### Changed

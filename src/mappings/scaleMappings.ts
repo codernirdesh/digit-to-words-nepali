@@ -4,7 +4,7 @@ import { NumberScale } from '../types/mappingTypes';
  * SCALE_VALUES
  * Maps scale names to their BigInt values for Nepali/Indian number system.
  */
-const SCALE_VALUES = {
+export const SCALE_VALUES = Object.freeze({
   ADANTA_SINGHAR: 10n ** 39n,
   MAHA_SINGHAR: 10n ** 37n,
   SINGHAR: 10n ** 35n,
@@ -25,13 +25,22 @@ const SCALE_VALUES = {
   LAKH: 10n ** 5n,
   THOUSAND: 10n ** 3n,
   HUNDRED: 10n ** 2n,
-} as const;
+} as const);
+
+function freezeScale(scale: NumberScale): Readonly<NumberScale> {
+  return Object.freeze({
+    value: scale.value,
+    names: Object.freeze({ ...scale.names }),
+  });
+}
 
 /**
  * baseScaleMappings
  * List of all supported number scales, sorted descending by value.
+ * Frozen so consumers cannot mutate the shared converter scale table.
  */
-export const baseScaleMappings: NumberScale[] = [
+const SCALE_MAPPINGS: readonly NumberScale[] = Object.freeze(
+  [
   {
     value: SCALE_VALUES.ADANTA_SINGHAR,
     names: { en: 'adanta singhar', ne: 'अदन्त सिंघर' }
@@ -86,18 +95,21 @@ export const baseScaleMappings: NumberScale[] = [
   { value: SCALE_VALUES.THOUSAND, names: { en: 'thousand', ne: 'हजार' }},
   { value: SCALE_VALUES.HUNDRED, names: { en: 'hundred', ne: 'सय' }}
 
-// Ensure correct descending order for BigInt values
-].sort((a, b) => {
-  if (a.value < b.value) return 1;
-  if (a.value > b.value) return -1;
-  return 0;
-});
+  // Ensure correct descending order for BigInt values
+  ]
+    .sort((a, b) => {
+      if (a.value < b.value) return 1;
+      if (a.value > b.value) return -1;
+      return 0;
+    })
+    .map(freezeScale)
+);
 
+export const baseScaleMappings = SCALE_MAPPINGS;
 
 /**
- * Nepali and English scale mappings (identical for this system).
+ * Nepali and English scale mappings. Same Indian numbering table; both
+ * exports are frozen so a consumer cannot mutate converter state through either name.
  */
-export const nepaliScaleMappings = baseScaleMappings;
-export const englishScaleMappings = baseScaleMappings;
-
-export { SCALE_VALUES };
+export const nepaliScaleMappings = SCALE_MAPPINGS;
+export const englishScaleMappings = SCALE_MAPPINGS;

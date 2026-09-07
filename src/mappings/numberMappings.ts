@@ -1,10 +1,25 @@
 import { WordMapping } from '../types/mappingTypes';
 
+function freezeWordMapping(mapping: WordMapping): Readonly<WordMapping> {
+  return Object.freeze({ en: mapping.en, ne: mapping.ne });
+}
+
+function freezeMap<K, V>(map: Map<K, V>): ReadonlyMap<K, V> {
+  const rejectMutation = (): never => {
+    throw new TypeError('Cannot mutate a frozen map');
+  };
+  map.set = rejectMutation as Map<K, V>['set'];
+  map.delete = rejectMutation as Map<K, V>['delete'];
+  map.clear = rejectMutation as Map<K, V>['clear'];
+  return Object.freeze(map);
+}
+
 /**
  * BASE_NUMBERS
  * Maps numbers 0-99 to their English and Nepali word representations.
+ * Frozen at runtime so consumers cannot mutate shared converter state.
  */
-export const BASE_NUMBERS = new Map<number, WordMapping>([
+const numbers = new Map<number, WordMapping>([
   [0, { en: 'zero', ne: 'शून्य' }],
   [1, { en: 'one', ne: 'एक' }],
   [2, { en: 'two', ne: 'दुई' }],
@@ -107,9 +122,22 @@ export const BASE_NUMBERS = new Map<number, WordMapping>([
   [99, { en: 'ninety nine', ne: 'उनान्सय' }]
 ]);
 
+for (const [value, mapping] of numbers) {
+  numbers.set(value, freezeWordMapping(mapping) as WordMapping);
+}
+
+export const BASE_NUMBERS: ReadonlyMap<number, Readonly<WordMapping>> = freezeMap(
+  numbers as Map<number, Readonly<WordMapping>>
+);
+
 /**
- * Returns a new Map of the base number word mappings.
+ * Returns a new, independently mutable Map of the base number word mappings.
+ * Nested objects are copied so edits cannot leak back into BASE_NUMBERS.
  */
 export function createNumberWordMap(): Map<number, WordMapping> {
-  return new Map(BASE_NUMBERS);
+  const copy = new Map<number, WordMapping>();
+  for (const [value, mapping] of BASE_NUMBERS) {
+    copy.set(value, { en: mapping.en, ne: mapping.ne });
+  }
+  return copy;
 }

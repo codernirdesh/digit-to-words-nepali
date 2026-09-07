@@ -16,7 +16,7 @@ import { CacheKey, conversionCache } from '../utils/cacheUtils';
  */
 export abstract class BaseConverter {
   protected wordCache: Map<number, WordMapping>;
-  protected scales: NumberScale[];
+  protected scales: readonly NumberScale[];
   protected customUnits: CustomUnits;
   protected customScales: CustomScales;
 
